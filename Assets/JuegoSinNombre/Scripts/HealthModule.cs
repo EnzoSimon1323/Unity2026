@@ -6,6 +6,10 @@ namespace JuegoSinNombre
 {
     public class HealthModule : NetworkIdentity
     {
+        public static HealthModule LocalPlayer { get; private set; }
+        public static event Action<HealthModule> OnLocalPlayerSpawned;
+        public static event Action OnLocalPlayerDespawned;
+
         [Header("Settings")]
         [SerializeField] private float _maxHealth = 100f;
 
@@ -29,12 +33,24 @@ namespace JuegoSinNombre
             }
             
             _currentHealth.onChanged += HandleHealthChanged;
+
+            if (isOwner)
+            {
+                LocalPlayer = this;
+                OnLocalPlayerSpawned?.Invoke(this);
+            }
         }
         
         protected override void OnDespawned()
         {
             base.OnDespawned();
             _currentHealth.onChanged -= HandleHealthChanged;
+
+            if (isOwner && LocalPlayer == this)
+            {
+                LocalPlayer = null;
+                OnLocalPlayerDespawned?.Invoke();
+            }
         }
 
         private void HandleHealthChanged(float newHealth)
