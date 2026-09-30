@@ -11,7 +11,18 @@ namespace JuegoSinNombre
 
         private void Update()
         {
-            if (HealthModule.LocalPlayer == null) 
+            HealthModule targetHealth = null;
+
+            if (PlayerIdentity.TryGetLocal(out PlayerIdentity localPlayer) && localPlayer.HealthModule != null)
+            {
+                targetHealth = localPlayer.HealthModule;
+            }
+            else if (HealthModule.LocalPlayer != null)
+            {
+                targetHealth = HealthModule.LocalPlayer;
+            }
+
+            if (targetHealth == null) 
                 return;
 
             Keyboard keyboard = Keyboard.current;
@@ -22,14 +33,14 @@ namespace JuegoSinNombre
             if (keyboard.kKey.wasPressedThisFrame)
             {
                 Debug.Log($"<color=orange>[Test] Aplicando {_damageAmount} de daño al jugador local.</color>");
-                HealthModule.LocalPlayer.ApplyDamageServerRpc(_damageAmount);
+                targetHealth.ApplyDamageServerRpc(_damageAmount);
             }
 
             // Presiona H para curarse
             if (keyboard.hKey.wasPressedThisFrame)
             {
                 Debug.Log($"<color=green>[Test] Curando {_healAmount} de vida al jugador local.</color>");
-                HealthModule.LocalPlayer.HealServerRpc(_healAmount);
+                targetHealth.HealServerRpc(_healAmount);
             }
         }
     }

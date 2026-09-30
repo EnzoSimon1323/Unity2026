@@ -14,13 +14,12 @@ namespace JuegoSinNombre
         [SerializeField] private float _maxHealth = 100f;
 
         [Header("Network State")]
-        [SerializeField] private SyncVar<float> _currentHealth = new(100f);
+        public SyncVar<float> currentHealth = new(100f);
 
-        public float CurrentHealth => _currentHealth.value;
+        public float CurrentHealth => currentHealth.value;
         public float MaxHealth => _maxHealth;
-        public bool IsDead => _currentHealth.value <= 0f;
+        public bool IsDead => currentHealth.value <= 0f;
 
-        public event Action<float, float> OnHealthChanged; // currentHealth, maxHealth
         public event Action OnDeath;
 
         protected override void OnSpawned()
@@ -29,10 +28,10 @@ namespace JuegoSinNombre
             
             if (isServer)
             {
-                _currentHealth.value = _maxHealth;
+                currentHealth.value = _maxHealth;
             }
             
-            _currentHealth.onChanged += HandleHealthChanged;
+            currentHealth.onChanged += CheckDeathCondition;
 
             if (isOwner)
             {
@@ -44,7 +43,7 @@ namespace JuegoSinNombre
         protected override void OnDespawned()
         {
             base.OnDespawned();
-            _currentHealth.onChanged -= HandleHealthChanged;
+            currentHealth.onChanged -= CheckDeathCondition;
 
             if (isOwner && LocalPlayer == this)
             {
@@ -53,9 +52,8 @@ namespace JuegoSinNombre
             }
         }
 
-        private void HandleHealthChanged(float newHealth)
+        private void CheckDeathCondition(float newHealth)
         {
-            OnHealthChanged?.Invoke(newHealth, _maxHealth);
             if (newHealth <= 0f)
             {
                 OnDeath?.Invoke();
@@ -68,7 +66,7 @@ namespace JuegoSinNombre
             if (!isServer || IsDead || damage <= 0f) 
                 return;
 
-            _currentHealth.value = Mathf.Clamp(_currentHealth.value - damage, 0f, _maxHealth);
+            currentHealth.value = Mathf.Clamp(currentHealth.value - damage, 0f, _maxHealth);
         }
         
         [ServerRpc(requireOwnership: false)]
@@ -77,7 +75,7 @@ namespace JuegoSinNombre
             if (!isServer || IsDead || amount <= 0f) 
                 return;
 
-            _currentHealth.value = Mathf.Clamp(_currentHealth.value + amount, 0f, _maxHealth);
+            currentHealth.value = Mathf.Clamp(currentHealth.value + amount, 0f, _maxHealth);
         }
     }
 }

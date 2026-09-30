@@ -52,23 +52,30 @@ namespace JuegoSinNombre
             }
 
             _boundHealthModule = healthModule;
-            _boundHealthModule.OnHealthChanged += UpdateHealthUI;
 
-            // Inicializar la interfaz con los valores actuales
-            UpdateHealthUI(_boundHealthModule.CurrentHealth, _boundHealthModule.MaxHealth);
+            if (_boundHealthModule != null && _boundHealthModule.currentHealth != null)
+            {
+                _boundHealthModule.currentHealth.onChanged += UpdateHealthUI;
+                UpdateHealthUI(_boundHealthModule.CurrentHealth);
+            }
         }
 
         private void UnbindCurrentPlayerHealth()
         {
             if (_boundHealthModule != null)
             {
-                _boundHealthModule.OnHealthChanged -= UpdateHealthUI;
+                if (_boundHealthModule.currentHealth != null)
+                {
+                    _boundHealthModule.currentHealth.onChanged -= UpdateHealthUI;
+                }
                 _boundHealthModule = null;
             }
         }
 
-        private void UpdateHealthUI(float currentHealth, float maxHealth)
+        private void UpdateHealthUI(float currentHealth)
         {
+            float maxHealth = _boundHealthModule != null ? _boundHealthModule.MaxHealth : 100f;
+
             if (_healthSlider != null)
             {
                 _healthSlider.maxValue = maxHealth;

@@ -348,6 +348,7 @@ GameObject:
   - component: {fileID: 4132688987784310869}
   - component: {fileID: 1266556318951745883}
   - component: {fileID: 6680819966246491199}
+  - component: {fileID: 4843696381274372780}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -510,6 +511,29 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7213731774504215223}
   m_Enabled: 1
+--- !u!114 &4843696381274372780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7213731774504215223}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17c5bfbc8d49ab041bffa68453ec4ff0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JuegoSinNombre.PlayerIdentity
+  _networkRules: {fileID: 0}
+  _visitiblityRules: {fileID: 0}
+  _isSetup: 0
+  _prefabId: -2147483648
+  _componentIndex: -2147483648
+  _shouldBePooled: 0
+  _parent: {fileID: 0}
+  _invertedPathToNearestParent: 
+  _directChildren: []
+  _healthModule: {fileID: 4132688987784310869}
+  _cameraSetup: {fileID: 1266556318951745883}
 --- !u!1 &9161069024552230771
 GameObject:
   m_ObjectHideFlags: 0

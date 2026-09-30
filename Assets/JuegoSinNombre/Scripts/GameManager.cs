@@ -54,7 +54,10 @@ namespace JuegoSinNombre
 
         private void HandleLocalPlayerSpawned(HealthModule playerHealth)
         {
-            playerHealth.OnHealthChanged += CheckHealthCondition;
+            if (playerHealth != null && playerHealth.currentHealth != null)
+            {
+                playerHealth.currentHealth.onChanged += CheckHealthCondition;
+            }
             playerHealth.OnDeath += HandlePlayerDeath;
         }
 
@@ -62,12 +65,15 @@ namespace JuegoSinNombre
         {
             if (HealthModule.LocalPlayer != null)
             {
-                HealthModule.LocalPlayer.OnHealthChanged -= CheckHealthCondition;
+                if (HealthModule.LocalPlayer.currentHealth != null)
+                {
+                    HealthModule.LocalPlayer.currentHealth.onChanged -= CheckHealthCondition;
+                }
                 HealthModule.LocalPlayer.OnDeath -= HandlePlayerDeath;
             }
         }
 
-        private void CheckHealthCondition(float currentHealth, float maxHealth)
+        private void CheckHealthCondition(float currentHealth)
         {
             if (currentHealth <= 0f && _currentState != GameState.GameOver)
             {

@@ -52,23 +52,23 @@ namespace JuegoSinNombre
             // Inicializar el valor actual de la barra
             if (_healthModule != null)
             {
-                UpdateHealthBar(_healthModule.CurrentHealth, _healthModule.MaxHealth);
+                UpdateHealthBar(_healthModule.CurrentHealth);
             }
         }
 
         private void OnEnable()
         {
-            if (_healthModule != null)
+            if (_healthModule != null && _healthModule.currentHealth != null)
             {
-                _healthModule.OnHealthChanged += UpdateHealthBar;
+                _healthModule.currentHealth.onChanged += UpdateHealthBar;
             }
         }
 
         private void OnDisable()
         {
-            if (_healthModule != null)
+            if (_healthModule != null && _healthModule.currentHealth != null)
             {
-                _healthModule.OnHealthChanged -= UpdateHealthBar;
+                _healthModule.currentHealth.onChanged -= UpdateHealthBar;
             }
         }
 
@@ -87,8 +87,10 @@ namespace JuegoSinNombre
             }
         }
 
-        private void UpdateHealthBar(float currentHealth, float maxHealth)
+        private void UpdateHealthBar(float currentHealth)
         {
+            float maxHealth = _healthModule != null ? _healthModule.MaxHealth : 100f;
+
             if (_healthFillImage != null)
             {
                 _healthFillImage.fillAmount = maxHealth > 0f ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
