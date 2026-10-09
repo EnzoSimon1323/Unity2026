@@ -342,13 +342,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4436244824109658821}
-  - component: {fileID: 5455217407775576207}
-  - component: {fileID: 7709140035082839812}
-  - component: {fileID: 1088101412335662844}
   - component: {fileID: 4132688987784310869}
   - component: {fileID: 1266556318951745883}
   - component: {fileID: 6680819966246491199}
   - component: {fileID: 4843696381274372780}
+  - component: {fileID: 1832420765098688935}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -369,90 +367,11 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 5618987019503253999}
   - {fileID: 8859337372031867285}
   - {fileID: 4870268649822660929}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &5455217407775576207
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7213731774504215223}
-  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &7709140035082839812
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7213731774504215223}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!136 &1088101412335662844
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7213731774504215223}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &4132688987784310869
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -475,7 +394,7 @@ MonoBehaviour:
   _invertedPathToNearestParent: 
   _directChildren: []
   _maxHealth: 100
-  _currentHealth:
+  currentHealth:
     _value: 100
     _ownerAuth: 0
     _sendIntervalInSeconds: 0
@@ -534,6 +453,23 @@ MonoBehaviour:
   _directChildren: []
   _healthModule: {fileID: 4132688987784310869}
   _cameraSetup: {fileID: 1266556318951745883}
+  _ragdollController: {fileID: 1832420765098688935}
+--- !u!114 &1832420765098688935
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7213731774504215223}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb4b8e3c7816a0640b2b25e534e2c3e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JuegoSinNombre.RagdollController
+  _animator: {fileID: 1953025365475091349}
+  _mainCollider: {fileID: 0}
+  _healthModule: {fileID: 4132688987784310869}
+  _isRagdollActive: 0
 --- !u!1 &9161069024552230771
 GameObject:
   m_ObjectHideFlags: 0
@@ -609,3 +545,158 @@ MonoBehaviour:
   m_FillOrigin: 1
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1001 &3517388599698378473
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 4436244824109658821}
+    m_Modifications:
+    - target: {fileID: 432495882596295274, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 432495882596295274, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 578850319509167690, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 578850319509167690, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 3552394333516785364, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 3552394333516785364, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 3588082571947503074, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 3588082571947503074, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 5684957316422955071, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 5684957316422955071, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 5795006999103116198, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 5795006999103116198, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 6026743018700495156, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 6026743018700495156, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 6092863152443922895, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 6092863152443922895, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 6831708315356249450, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 6831708315356249450, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 7059655622524267632, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 7059655622524267632, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    - target: {fileID: 8530151994423389628, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_Name
+      value: HumanM_Archer
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9086720356229533890, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _healthModule
+      value: 
+      objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 9086720356229533890, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _ragdollController
+      value: 
+      objectReference: {fileID: 1832420765098688935}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+--- !u!95 &1953025365475091349 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 3155559284503195004, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+  m_PrefabInstance: {fileID: 3517388599698378473}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &5618987019503253999 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9019268214999381766, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+  m_PrefabInstance: {fileID: 3517388599698378473}
+  m_PrefabAsset: {fileID: 0}

@@ -13,9 +13,11 @@ namespace JuegoSinNombre
         [Header("Cached Modules")]
         [SerializeField] private HealthModule _healthModule;
         [SerializeField] private PlayerCameraSetup _cameraSetup;
+        [SerializeField] private RagdollController _ragdollController;
 
         public HealthModule HealthModule => _healthModule;
         public PlayerCameraSetup CameraSetup => _cameraSetup;
+        public RagdollController RagdollController => _ragdollController;
 
         private void Awake()
         {
@@ -37,6 +39,11 @@ namespace JuegoSinNombre
             if (_cameraSetup == null)
             {
                 TryGetComponent(out _cameraSetup);
+            }
+
+            if (_ragdollController == null)
+            {
+                TryGetComponent(out _ragdollController);
             }
         }
 
