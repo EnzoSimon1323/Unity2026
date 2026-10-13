@@ -17,7 +17,7 @@ MonoBehaviour:
     migrateAsHost: 1
     sharePlayerCookiesWithPeers: 0
   _defaultSpawnRules:
-    spawnAuth: 0
+    spawnAuth: 1
     despawnAuth: 3
     defaultOwner: 1
     propagateOwnershipByDefault: 1
