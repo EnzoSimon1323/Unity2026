@@ -3,27 +3,23 @@ using PurrNet;
 using UnityEngine;
 
 /// <summary>
-/// Tension del arco. Mantener clic para tensar, soltar para disparar.
-///
-/// Cambio respecto a la primera version: ya no tiene sus propios flags de
-/// CanShoot ni DrawTimeMultiplier. Los lee del ArcherPlayer, que es
-/// el unico que recibe ordenes del servidor.
+/// Tension del arco. Requiere mantener apuntado (clic derecho, ver AimController)
+/// para poder tensar con clic izquierdo. Soltar el apuntado cancela el tiro.
 /// </summary>
 public class BowController : NetworkIdentity
 {
     [Header("Tensado")]
-    [Tooltip("Segundos para llegar al 100% de tension, sin efectos activos.")]
     [SerializeField] private float drawTime = 1.2f;
-
-    [Tooltip("Por debajo de esta tension el disparo se cancela en vez de salir flojo.")]
     [SerializeField] private float minShootTension = 0.15f;
-
-    [Tooltip("Da feel al tensado. X = progreso, Y = tension resultante.")]
     [SerializeField] private AnimationCurve drawCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Referencias")]
     [SerializeField] private ArcherPlayer player;
+    [SerializeField] private AimController aim;
     [SerializeField] private PlayerShooter shooter;
+    [SerializeField] private Animator animator;
+    [SerializeField] private string tensionParam = "Tension";
+    [SerializeField] private string shootTriggerParam = "Shoot";
 
     public float Tension { get; private set; }
     public bool IsDrawing { get; private set; }
@@ -39,8 +35,8 @@ public class BowController : NetworkIdentity
     {
         if (!isOwner) return;
 
-        // La FSM del servidor habilita el arco solo en la fase Aiming.
-        if (!player.CanShoot)
+        // Sin apuntar no hay nada que tensar: primero se levanta el arco (clic derecho).
+        if (!player.CanShoot || !aim.IsAiming)
         {
             if (IsDrawing) CancelDraw();
             return;
@@ -52,14 +48,6 @@ public class BowController : NetworkIdentity
             return;
         }
 
-        if (Input.GetMouseButtonDown(1))
-        {
-            CancelDraw();
-            return;
-        }
-
-        // Se consulta el estado del boton, no el "se soltó este frame".
-        // Asi, si el jugador hace alt-tab, el arco se libera y no queda trabado.
         if (Input.GetMouseButton(0))
             UpdateDraw();
         else
@@ -94,6 +82,7 @@ public class BowController : NetworkIdentity
         }
 
         shooter.Shoot(finalTension);
+        if (animator != null) animator.SetTrigger(shootTriggerParam);
         OnReleased?.Invoke(finalTension);
         ResetDraw();
     }
@@ -116,6 +105,7 @@ public class BowController : NetworkIdentity
         value = Mathf.Clamp01(value);
         if (Mathf.Approximately(value, Tension)) return;
         Tension = value;
+        if (animator != null) animator.SetFloat(tensionParam, value);
         OnTensionChanged?.Invoke(Tension);
     }
 }

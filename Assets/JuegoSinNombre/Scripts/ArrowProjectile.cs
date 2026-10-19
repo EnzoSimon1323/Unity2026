@@ -23,6 +23,7 @@ public class ArrowProjectile : NetworkIdentity
     private void Awake() => _rb = GetComponent<Rigidbody>();
 
     /// <summary>Lo llama el PlayerShooter apenas crea la flecha.</summary>
+    /// <summary>Lo llama el PlayerShooter apenas crea la flecha.</summary>
     public void Launch(ArrowDefinition definition, Vector3 direction, float speed, PlayerID? shooter)
     {
         _definition = definition;
@@ -30,11 +31,11 @@ public class ArrowProjectile : NetworkIdentity
         _flying = true;
 
         _rb.mass = definition.mass;
-        _rb.linearVelocity = direction * speed;
+        _rb.AddForce(direction * speed, ForceMode.VelocityChange);
 
         Destroy(gameObject, lifeTime);
     }
-
+    
     private void FixedUpdate()
     {
         if (!_flying || _definition == null) return;
