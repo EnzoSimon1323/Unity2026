@@ -21,6 +21,7 @@ namespace JuegoSinNombre
         public bool IsDead => currentHealth.value <= 0f;
 
         public event Action OnDeath;
+        public static event Action<HealthModule> OnAnyPlayerDied;
 
         protected override void OnSpawned()
         {
@@ -57,6 +58,7 @@ namespace JuegoSinNombre
             if (newHealth <= 0f)
             {
                 OnDeath?.Invoke();
+                OnAnyPlayerDied?.Invoke(this);
             }
         }
         
@@ -76,6 +78,13 @@ namespace JuegoSinNombre
                 return;
 
             currentHealth.value = Mathf.Clamp(currentHealth.value + amount, 0f, _maxHealth);
+        }
+
+        [ServerRpc(requireOwnership: false)]
+        public void ResetHealthServerRpc()
+        {
+            if (!isServer) return;
+            currentHealth.value = _maxHealth;
         }
     }
 }

@@ -151,6 +151,11 @@ namespace JuegoSinNombre
             SetRagdollState(true);
         }
 
+        public void ResetRagdoll()
+        {
+            SetRagdollState(false);
+        }
+
         public void ApplyImpactForce(Vector3 force, Vector3 hitPoint, float explosionRadius = 0.5f)
         {
             if (!_isRagdollActive)

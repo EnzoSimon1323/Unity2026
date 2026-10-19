@@ -1,109 +1,378 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using PurrNet;
 
 namespace JuegoSinNombre
 {
-    public enum GameState
+    public enum MatchFormat
     {
-        Playing,
-        GameOver
+        BestOf3 = 3,
+        BestOf5 = 5
     }
 
-    public class GameManager : MonoBehaviour
+    /// <summary>
+    /// Servidor y Host autoritativo del ciclo de juego:
+    /// - Estructura de partida Maestra (al mejor de 3 o 5 rondas).
+    /// - Detección de vida en 0 (currentHealth) para otorgar victoria de ronda.
+    /// - Sincronización y secuenciación de micro-rondas de disparo:
+    ///   (Resolución de impacto -> Verificación de vida -> Pausa breve -> Reinicio de la siguiente flecha).
+    /// </summary>
+    [DisallowMultipleComponent]
+    public class GameManager : NetworkIdentity
     {
         public static GameManager Instance { get; private set; }
 
-        [Header("State")]
-        [SerializeField] private GameState _currentState = GameState.Playing;
+        [Header("Match Settings")]
+        [SerializeField] private MatchFormat _matchFormat = MatchFormat.BestOf3;
+        [SerializeField] private float _impactResolutionWait = 1.0f;
+        [SerializeField] private float _nextRoundDelay = 2.5f;
+        [SerializeField] private float _nextMicroRoundDelay = 1.5f;
 
-        public GameState CurrentState => _currentState;
-        public event Action<GameState> OnGameStateChanged;
+        [Header("Network State")]
+        public readonly SyncVar<RoundPhase> currentPhase = new(RoundPhase.WaitingForPlayers);
+        public readonly SyncVar<int> roundNumber = new(1);
+        public readonly SyncVar<int> player1Wins = new(0);
+        public readonly SyncVar<int> player2Wins = new(0);
 
-        private void Awake()
+        public RoundPhase CurrentPhase => currentPhase.value;
+        public int RoundNumber => roundNumber.value;
+        public int Player1Wins => player1Wins.value;
+        public int Player2Wins => player2Wins.value;
+        public int WinsNeeded => ((int)_matchFormat / 2) + 1;
+
+        public event Action<RoundPhase> OnPhaseChanged;
+        public event Action<int, int> OnScoreChanged;
+        public event Action<PlayerID?> OnMatchOver;
+
+        private Coroutine _turnRoutine;
+        private bool _isTransitioning;
+
+        protected override void OnSpawned()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
+            base.OnSpawned();
             Instance = this;
-        }
 
-        private void OnEnable()
-        {
-            HealthModule.OnLocalPlayerSpawned += HandleLocalPlayerSpawned;
-            HealthModule.OnLocalPlayerDespawned += HandleLocalPlayerDespawned;
+            currentPhase.onChanged += HandlePhaseChanged;
+            player1Wins.onChanged += HandleScoreChanged;
+            player2Wins.onChanged += HandleScoreChanged;
 
-            if (HealthModule.LocalPlayer != null)
+            if (isServer)
             {
-                HandleLocalPlayerSpawned(HealthModule.LocalPlayer);
+                CombatResolver.OnHitResolved += HandleHitResolvedServer;
+                HealthModule.OnAnyPlayerDied += HandleAnyPlayerDiedServer;
+                
+                // Si ya hay jugadores conectados al spawnear el GameManager
+                StartCoroutine(ServerWaitForPlayersAndStart());
             }
         }
 
-        private void OnDisable()
+        protected override void OnDespawned(bool asServer)
         {
-            HealthModule.OnLocalPlayerSpawned -= HandleLocalPlayerSpawned;
-            HealthModule.OnLocalPlayerDespawned -= HandleLocalPlayerDespawned;
+            currentPhase.onChanged -= HandlePhaseChanged;
+            player1Wins.onChanged -= HandleScoreChanged;
+            player2Wins.onChanged -= HandleScoreChanged;
 
-            if (HealthModule.LocalPlayer != null)
+            if (isServer)
             {
-                HandleLocalPlayerDespawned();
+                CombatResolver.OnHitResolved -= HandleHitResolvedServer;
+                HealthModule.OnAnyPlayerDied -= HandleAnyPlayerDiedServer;
+            }
+
+            if (Instance == this) Instance = null;
+            base.OnDespawned(asServer);
+        }
+
+        private void HandlePhaseChanged(RoundPhase newPhase)
+        {
+            OnPhaseChanged?.Invoke(newPhase);
+        }
+
+        private void HandleScoreChanged(int _)
+        {
+            OnScoreChanged?.Invoke(player1Wins.value, player2Wins.value);
+        }
+
+        // =========================================================================
+        // LÓGICA DE SERVIDOR: Flujo de Partida y Transiciones de Micro-Rondas
+        // =========================================================================
+
+        private IEnumerator ServerWaitForPlayersAndStart()
+        {
+            if (!isServer) yield break;
+
+            currentPhase.value = RoundPhase.WaitingForPlayers;
+            Debug.Log("[GameManager] Servidor en espera de jugadores...");
+
+            while (PlayerIdentity.allPlayers.Count < 2)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            Debug.Log("[GameManager] Jugadores listos. Iniciando Partida Maestra!");
+            StartNewMatchServer();
+        }
+
+        [ContextMenu("Server: Start New Match")]
+        public void StartNewMatchServer()
+        {
+            if (!isServer) return;
+
+            if (_turnRoutine != null) StopCoroutine(_turnRoutine);
+
+            roundNumber.value = 1;
+            player1Wins.value = 0;
+            player2Wins.value = 0;
+            _isTransitioning = false;
+
+            StartRoundServer();
+        }
+
+        private void StartRoundServer()
+        {
+            if (!isServer) return;
+
+            Debug.Log($"<color=cyan><b>[GameManager] === INICIO DE RONDA {roundNumber.value} ===</b></color>");
+
+            // 1. Restaurar vida y estado de todos los jugadores
+            ResetAllPlayersHealthAndState();
+
+            // 2. Rollear viento si está disponible
+            if (WindManager.Instance != null)
+            {
+                WindManager.Instance.RollWind();
+            }
+
+            // 3. Comenzar ciclo de micro-ronda de disparo
+            _turnRoutine = StartCoroutine(ServerMicroRoundCycle());
+        }
+
+        private IEnumerator ServerMicroRoundCycle()
+        {
+            _isTransitioning = false;
+
+            // Fase: Inicio de micro-ronda
+            currentPhase.value = RoundPhase.RoundStart;
+            yield return new WaitForSeconds(0.5f);
+
+            // Fase: Ventana de Consumibles
+            currentPhase.value = RoundPhase.ConsumableWindow;
+            yield return new WaitForSeconds(1.0f);
+
+            // Fase: Apuntado y Disparo (Desbloquear arcos)
+            currentPhase.value = RoundPhase.Aiming;
+            SetAllPlayersCanShoot(true);
+            Debug.Log("[GameManager] Fase Aiming: Arcos desbloqueados. ¡Apunten y disparen!");
+        }
+
+        /// <summary>
+        /// Recibe la confirmación de impacto de flecha desde CombatResolver en el servidor.
+        /// </summary>
+        private void HandleHitResolvedServer(ArrowHitInfo hit, HealthModule victim)
+        {
+            if (!isServer || _isTransitioning) return;
+
+            // Si estábamos en apuntado o resolución, iniciamos la transición
+            if (currentPhase.value == RoundPhase.Aiming || currentPhase.value == RoundPhase.Resolving)
+            {
+                if (_turnRoutine != null) StopCoroutine(_turnRoutine);
+                _turnRoutine = StartCoroutine(ServerProcessImpactAndTransition(victim));
             }
         }
 
-        private void HandleLocalPlayerSpawned(HealthModule playerHealth)
+        /// <summary>
+        /// Detección inmediata en servidor cuando la vida de cualquier jugador llega a 0.
+        /// </summary>
+        private void HandleAnyPlayerDiedServer(HealthModule deadPlayer)
         {
-            if (playerHealth != null && playerHealth.currentHealth != null)
+            if (!isServer) return;
+
+            if (currentPhase.value != RoundPhase.GameOver && !_isTransitioning)
             {
-                playerHealth.currentHealth.onChanged += CheckHealthCondition;
+                if (_turnRoutine != null) StopCoroutine(_turnRoutine);
+                _turnRoutine = StartCoroutine(ServerProcessImpactAndTransition(deadPlayer));
             }
-            playerHealth.OnDeath += HandlePlayerDeath;
         }
 
-        private void HandleLocalPlayerDespawned()
+        /// <summary>
+        /// Secuencia autoritativa de micro-ronda:
+        /// 1. Resolución de impacto (bloquear arcos, pasar a Resolving)
+        /// 2. Pausa breve de lectura de impacto
+        /// 3. Verificación de vida (Outcome)
+        /// 4. Si la vida llega a 0 -> Sumar victoria de ronda y evaluar partida Maestra
+        /// 5. Si siguen vivos -> Pausa breve y reinicio de la siguiente flecha
+        /// </summary>
+        private IEnumerator ServerProcessImpactAndTransition(HealthModule affectedPlayer)
         {
-            if (HealthModule.LocalPlayer != null)
+            _isTransitioning = true;
+
+            // 1. Resolución de impacto: bloquear arcos inmediatamente
+            SetAllPlayersCanShoot(false);
+            currentPhase.value = RoundPhase.Resolving;
+            Debug.Log("[GameManager] Fase Resolving: Flecha impactó. Analizando resultado...");
+
+            // Pausa breve de lectura de impacto
+            yield return new WaitForSeconds(_impactResolutionWait);
+
+            // 2. Verificación de vida: Pasar a Outcome
+            currentPhase.value = RoundPhase.Outcome;
+            yield return new WaitForSeconds(0.5f);
+
+            // Verificar si algún jugador murió (currentHealth <= 0)
+            HealthModule deadPlayer = null;
+            if (affectedPlayer != null && affectedPlayer.IsDead)
             {
-                if (HealthModule.LocalPlayer.currentHealth != null)
+                deadPlayer = affectedPlayer;
+            }
+            else
+            {
+                foreach (var kvp in PlayerIdentity.allPlayers)
                 {
-                    HealthModule.LocalPlayer.currentHealth.onChanged -= CheckHealthCondition;
+                    if (kvp.Value != null && kvp.Value.HealthModule != null && kvp.Value.HealthModule.IsDead)
+                    {
+                        deadPlayer = kvp.Value.HealthModule;
+                        break;
+                    }
                 }
-                HealthModule.LocalPlayer.OnDeath -= HandlePlayerDeath;
             }
-        }
 
-        private void CheckHealthCondition(float currentHealth)
-        {
-            if (currentHealth <= 0f && _currentState != GameState.GameOver)
+            // 3. Resolución de la micro-ronda o fin de ronda
+            if (deadPlayer != null)
             {
-                TriggerGameOver();
+                // Un jugador cayó: Sumar victoria al oponente
+                AwardRoundVictoryServer(deadPlayer);
             }
-        }
-
-        private void HandlePlayerDeath()
-        {
-            if (_currentState != GameState.GameOver)
+            else
             {
-                TriggerGameOver();
+                // Ambos siguen en pie: Pausa breve y preparar la siguiente flecha (micro-ronda)
+                Debug.Log($"[GameManager] Ambos arqueros siguen con vida. Preparando siguiente micro-ronda en {_nextMicroRoundDelay}s...");
+                yield return new WaitForSeconds(_nextMicroRoundDelay);
+
+                // Caducan efectos o se rueda viento si corresponde
+                if (WindManager.Instance != null)
+                {
+                    WindManager.Instance.RollWind();
+                }
+
+                _turnRoutine = StartCoroutine(ServerMicroRoundCycle());
             }
         }
 
-        public void TriggerGameOver()
+        private void AwardRoundVictoryServer(HealthModule deadPlayer)
         {
-            if (_currentState == GameState.GameOver) return;
+            if (!isServer) return;
 
-            _currentState = GameState.GameOver;
-            Debug.Log("<color=red><b>[GameManager] ¡FIN DE LA PARTIDA!</b> La vida ha llegado a 0.</color>");
+            // Identificar qué jugador ganó la ronda
+            List<PlayerID> playerKeys = new List<PlayerID>(PlayerIdentity.allPlayers.Keys);
+            PlayerID? winnerId = null;
 
-            OnGameStateChanged?.Invoke(_currentState);
+            if (playerKeys.Count >= 2)
+            {
+                PlayerID p1 = playerKeys[0];
+                PlayerID p2 = playerKeys[1];
+
+                if (deadPlayer.owner == p1)
+                {
+                    player2Wins.value++;
+                    winnerId = p2;
+                    Debug.Log($"<color=green>[GameManager] ¡P2 gana la Ronda {roundNumber.value}!</color> Marcador: P1 {player1Wins.value} - P2 {player2Wins.value}");
+                }
+                else
+                {
+                    player1Wins.value++;
+                    winnerId = p1;
+                    Debug.Log($"<color=green>[GameManager] ¡P1 gana la Ronda {roundNumber.value}!</color> Marcador: P1 {player1Wins.value} - P2 {player2Wins.value}");
+                }
+            }
+            else
+            {
+                // Fallback si se está testeando en solitario
+                player1Wins.value++;
+                Debug.Log($"[GameManager] Victoria de ronda otorgada. Marcador: P1 {player1Wins.value}");
+            }
+
+            // 4. Evaluar condición de victoria de la Partida Maestra
+            int targetWins = WinsNeeded;
+            if (player1Wins.value >= targetWins || player2Wins.value >= targetWins)
+            {
+                TriggerMatchGameOverServer(winnerId);
+            }
+            else
+            {
+                // Pasar a la siguiente ronda tras una breve pausa
+                roundNumber.value++;
+                _turnRoutine = StartCoroutine(ServerWaitAndStartNextRound());
+            }
         }
 
-        public void RestartGame()
+        private IEnumerator ServerWaitAndStartNextRound()
         {
-            _currentState = GameState.Playing;
-            Debug.Log("[GameManager] Partida reiniciada.");
-            OnGameStateChanged?.Invoke(_currentState);
+            Debug.Log($"[GameManager] Próxima ronda ({roundNumber.value}) en {_nextRoundDelay} segundos...");
+            yield return new WaitForSeconds(_nextRoundDelay);
+            StartRoundServer();
+        }
+
+        private void TriggerMatchGameOverServer(PlayerID? matchWinner)
+        {
+            if (!isServer) return;
+
+            currentPhase.value = RoundPhase.GameOver;
+            Debug.Log($"<color=yellow><b>[GameManager] ¡FIN DE LA PARTIDA MAESTRA! Ganador: {matchWinner}</b></color>");
+
+            NotifyMatchOverObserversRpc(matchWinner);
+        }
+
+        [ObserversRpc(runLocally: true)]
+        private void NotifyMatchOverObserversRpc(PlayerID? matchWinner)
+        {
+            OnMatchOver?.Invoke(matchWinner);
+        }
+
+        // =========================================================================
+        // HELPERS DE CONTROL DE JUGADORES
+        // =========================================================================
+
+        private void SetAllPlayersCanShoot(bool canShoot)
+        {
+            if (!isServer) return;
+
+            foreach (var kvp in PlayerIdentity.allPlayers)
+            {
+                if (kvp.Value != null && kvp.Value.TryGetComponent(out ArcherPlayer archer))
+                {
+                    archer.SetCanShoot(canShoot);
+                }
+            }
+        }
+
+        private void ResetAllPlayersHealthAndState()
+        {
+            if (!isServer) return;
+
+            foreach (var kvp in PlayerIdentity.allPlayers)
+            {
+                if (kvp.Value == null) continue;
+
+                // Resetear salud autoritativa
+                if (kvp.Value.HealthModule != null)
+                {
+                    kvp.Value.HealthModule.ResetHealthServerRpc();
+                }
+
+                // Resetear ragdoll si estaba activo
+                if (kvp.Value.RagdollController != null)
+                {
+                    kvp.Value.RagdollController.ResetRagdoll();
+                }
+
+                // Resetear modificadores del arquero
+                if (kvp.Value.TryGetComponent(out ArcherPlayer archer))
+                {
+                    archer.ResetModifiers();
+                    archer.SetCanShoot(false);
+                }
+            }
         }
     }
 }
