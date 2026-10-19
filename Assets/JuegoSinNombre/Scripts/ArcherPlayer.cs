@@ -90,6 +90,7 @@ public class ArcherPlayer : NetworkIdentity, IEffectTarget
         Notify();
     }
 
+    [ObserversRpc(runLocally: true)]
     public void SetCanShoot(bool canShoot)
     {
         CanShoot = canShoot;
