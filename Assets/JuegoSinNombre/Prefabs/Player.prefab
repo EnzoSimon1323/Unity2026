@@ -706,8 +706,10 @@ MonoBehaviour:
   loadout:
   - {fileID: 11400000, guid: 60a45beb0d262b54d81f9a32dc88750e, type: 2}
   baseLaunchSpeed: 40
-  arrowSpawnPoint: {fileID: 8262356809635751525}
+  spawnHeight: 0.5
+  spawnForwardOffset: 0.5
   aim: {fileID: 6381136078616373014}
+  ownCollider: {fileID: 2046342699540855489}
 --- !u!114 &5332368801571412074
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1024,6 +1026,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 3304582864495704230}
   m_SourcePrefab: {fileID: 100100000, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+--- !u!136 &2046342699540855489 stripped
+CapsuleCollider:
+  m_CorrespondingSourceObject: {fileID: 3221858912984593448, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+  m_PrefabInstance: {fileID: 3517388599698378473}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &2179162242503862673 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3381559866046097272, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}

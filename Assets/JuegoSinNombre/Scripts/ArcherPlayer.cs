@@ -30,12 +30,24 @@ public class ArcherPlayer : NetworkIdentity, IEffectTarget
     public bool CrosshairVisible { get; private set; } = true;
     public bool CanShoot { get; private set; }
 
+    /// <summary>El ArcherPlayer del jugador local, para que otros scripts (UI, flechas) lo encuentren sin pasar referencias a mano.</summary>
+    public static ArcherPlayer LocalPlayer { get; private set; }
+
     /// <summary>Lo escucha el HUD para redibujar la mira o el blur cuando algo cambia.</summary>
     public event System.Action OnModifiersChanged;
 
     protected override void OnSpawned(bool asServer)
     {
         ResetModifiers();
+
+        if (isOwner)
+            LocalPlayer = this;
+    }
+
+    protected override void OnDespawned(bool asServer)
+    {
+        if (LocalPlayer == this)
+            LocalPlayer = null;
     }
 
     // ================= IEffectTarget =================

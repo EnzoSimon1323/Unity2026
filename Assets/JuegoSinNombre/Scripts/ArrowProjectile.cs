@@ -9,7 +9,6 @@ using JuegoSinNombre;
 [RequireComponent(typeof(Rigidbody))]
 public class ArrowProjectile : NetworkIdentity
 {
-    [Tooltip("Segundos antes de desaparecer si no impacta nada.")]
     [SerializeField] private float lifeTime = 12f;
 
     private Rigidbody _rb;
@@ -17,30 +16,72 @@ public class ArrowProjectile : NetworkIdentity
     private PlayerID? _shooter;
     private bool _flying;
 
+    private readonly SyncVar<Vector3> _velocity = new(Vector3.zero);
+
     public ArrowDefinition Definition => _definition;
     public PlayerID? Shooter => _shooter;
 
     private void Awake() => _rb = GetComponent<Rigidbody>();
 
-    /// <summary>Lo llama el PlayerShooter apenas crea la flecha.</summary>
-    /// <summary>Lo llama el PlayerShooter apenas crea la flecha.</summary>
+    protected override void OnSpawned(bool asServer)
+    {
+        _velocity.onChanged += ApplyVelocity;
+
+        if (_velocity.value.sqrMagnitude > 0.0001f)
+            ApplyVelocity(_velocity.value);
+
+        if (isOwner)
+            IgnoreOwnColliders();
+    }
+
+    protected override void OnDespawned(bool asServer)
+    {
+        _velocity.onChanged -= ApplyVelocity;
+    }
+
+    // ESTE es el metodo que cambia:
+    private void IgnoreOwnColliders()
+    {
+        if (ArcherPlayer.LocalPlayer == null) return;
+
+        var myColliders = GetComponentsInChildren<Collider>(true);
+        var ownColliders = ArcherPlayer.LocalPlayer.GetComponentsInChildren<Collider>(true);
+
+        foreach (var myCol in myColliders)
+        {
+            if (myCol == null) continue;
+            foreach (var col in ownColliders)
+            {
+                if (col != null)
+                    Physics.IgnoreCollision(myCol, col, true);
+            }
+        }
+    }
+
+    private void ApplyVelocity(Vector3 v)
+    {
+        _rb.AddForce(v, ForceMode.VelocityChange);
+        _flying = v.sqrMagnitude > 0.0001f;
+    }
+
+    /// <summary>Lo llama PlayerShooter.ShootServerRpc, siempre en el servidor.</summary>
     public void Launch(ArrowDefinition definition, Vector3 direction, float speed, PlayerID? shooter)
     {
+        if (!isServer) return;
+
         _definition = definition;
         _shooter = shooter;
-        _flying = true;
 
         _rb.mass = definition.mass;
-        _rb.AddForce(direction * speed, ForceMode.VelocityChange);
+        _velocity.value = direction * speed;
 
         Destroy(gameObject, lifeTime);
     }
-    
+
     private void FixedUpdate()
     {
         if (!_flying || _definition == null) return;
 
-        // El viento. Si windMultiplier es 0 (Flecha Colosal) no lo afecta.
         if (_definition.windMultiplier != 0f && WindManager.Instance != null)
         {
             _rb.AddForce(
@@ -56,35 +97,39 @@ public class ArrowProjectile : NetworkIdentity
     {
         if (!_flying) return;
 
-        // Dos flechas que se cruzan en el aire se destruyen.
         if (collision.gameObject.TryGetComponent(out ArrowProjectile other))
         {
-            Destroy(other.gameObject);
-            Destroy(gameObject);
+            if (isServer)
+            {
+                Destroy(other.gameObject);
+                Destroy(gameObject);
+            }
+            _flying = false;
             return;
         }
 
         _flying = false;
 
-        // El daño lo resuelve el servidor (CombatResolver). Esta flecha
-        // solo detecta el impacto y arma el struct que viaja a HealthModule.
-        if (isServer
-            && collision.gameObject.TryGetComponent(out ArcherPlayer victim)
-            && collision.gameObject.TryGetComponent(out HealthModule health))
+        if (isServer)
         {
-            var hit = new ArrowHitInfo
-            {
-                shooter = _shooter,
-                victim = victim.owner,
-                damage = _definition.baseDamage,
-                hitPoint = collision.GetContact(0).point,
-                effects = _definition.effectsOnTarget
-            };
+            ArcherPlayer victim = collision.gameObject.GetComponentInParent<ArcherPlayer>();
+            HealthModule health = collision.gameObject.GetComponentInParent<HealthModule>();
 
-            CombatResolver.ResolveHit(hit, health);
+            if (victim != null && health != null)
+            {
+                var hit = new ArrowHitInfo
+                {
+                    shooter = _shooter,
+                    victim = victim.owner,
+                    damage = _definition != null ? _definition.baseDamage : 0f,
+                    hitPoint = collision.GetContact(0).point,
+                    effects = _definition != null ? _definition.effectsOnTarget : null
+                };
+
+                CombatResolver.ResolveHit(hit, health);
+            }
         }
 
-        // Se clava donde pego.
         _rb.isKinematic = true;
         transform.SetParent(collision.transform, true);
     }

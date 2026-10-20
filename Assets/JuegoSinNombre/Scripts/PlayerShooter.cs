@@ -8,17 +8,20 @@ using UnityEngine;
 public class PlayerShooter : NetworkIdentity
 {
     [Header("Flechas")]
-    [Tooltip("Las flechas que este jugador tiene disponibles.")]
     [SerializeField] private ArrowDefinition[] loadout;
-
-    [Tooltip("Velocidad de salida con tension al 100%, antes del multiplicador de la flecha.")]
     [SerializeField] private float baseLaunchSpeed = 40f;
 
+    [Header("Spawn (independiente del BodyPivot, para que funcione igual en el servidor)")]
+    [SerializeField] private float spawnHeight = 1.4f;
+    [SerializeField] private float spawnForwardOffset = 0.5f;
+
     [Header("Referencias")]
-    [SerializeField] private Transform arrowSpawnPoint;
     [SerializeField] private AimController aim;
+    
+    private Collider[] _ownColliders;
 
     private int _selectedIndex;
+    
 
     /// <summary>La flecha equipada. El HUD la lee para mostrar el icono.</summary>
     public ArrowDefinition Selected =>
@@ -58,7 +61,7 @@ public class PlayerShooter : NetworkIdentity
     [ServerRpc(requireOwnership: true)]
     private void ShootServerRpc(float tension, Vector3 direction, int arrowIndex)
     {
-        // Validar todo de nuevo: nunca confiar en lo que mando el cliente.
+        
         if (loadout == null || arrowIndex < 0 || arrowIndex >= loadout.Length) return;
 
         ArrowDefinition def = loadout[arrowIndex];
@@ -68,10 +71,9 @@ public class PlayerShooter : NetworkIdentity
         if (direction.sqrMagnitude < 0.0001f) return;
         direction.Normalize();
 
-        GameObject go = Instantiate(
-            def.prefab,
-            arrowSpawnPoint.position,
-            Quaternion.LookRotation(direction));
+        Vector3 spawnPosition = transform.position + Vector3.up * spawnHeight + direction * spawnForwardOffset;
+
+        GameObject go = Instantiate(def.prefab, spawnPosition, Quaternion.LookRotation(direction));
 
         if (!go.TryGetComponent(out ArrowProjectile arrow))
         {
@@ -79,6 +81,19 @@ public class PlayerShooter : NetworkIdentity
             Destroy(go);
             return;
         }
+        var arrowColliders = go.GetComponentsInChildren<Collider>(true);
+        var ownColliders = GetComponentsInChildren<Collider>(true);
+        foreach (var arrowCol in arrowColliders)
+        {
+            if (arrowCol == null) continue;
+            foreach (var col in ownColliders)
+            {
+                if (col != null)
+                    Physics.IgnoreCollision(arrowCol, col, true);
+            }
+        }
+        
+        
 
         if (go.TryGetComponent(out NetworkIdentity identity))
             identity.GiveOwnership(owner);
