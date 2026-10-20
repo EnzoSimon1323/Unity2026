@@ -20,7 +20,7 @@ MonoBehaviour:
   mass: 0.1
   windMultiplier: 1
   alignToVelocity: 1
-  baseDamage: 1
+  baseDamage: 25
   homing: 0
   splashRadius: 0
   effectsOnTarget: []
