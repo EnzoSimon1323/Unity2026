@@ -445,6 +445,7 @@ GameObject:
   - component: {fileID: 5332230635311595454}
   - component: {fileID: 2000733977527221683}
   - component: {fileID: 6044584296957834912}
+  - component: {fileID: 5961640575709539549}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -710,6 +711,31 @@ MonoBehaviour:
   spawnForwardOffset: 0.5
   aim: {fileID: 6381136078616373014}
   player: {fileID: 5332230635311595454}
+--- !u!114 &5961640575709539549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7213731774504215223}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ab63ecd016eead4f97863ee1b5ed90e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JuegoSinNombre.ArrowFollowCamera
+  _playerCamera: {fileID: 1130339829164792812}
+  _cameraPivot: {fileID: 0}
+  _aimController: {fileID: 6381136078616373014}
+  _archerPlayer: {fileID: 5332230635311595454}
+  _distanceBehind: 1
+  _heightAbove: 0.55
+  _sideOffset: 0.35
+  _lookAheadDistance: 8
+  _positionSmoothSpeed: 16
+  _rotationSpeed: 14
+  _flightFov: 65
+  _impactHoldDuration: 2
+  _returnDuration: 0.55
 --- !u!1 &9161069024552230771
 GameObject:
   m_ObjectHideFlags: 0
