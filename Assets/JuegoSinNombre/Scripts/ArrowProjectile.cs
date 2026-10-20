@@ -20,6 +20,17 @@ public class ArrowProjectile : NetworkIdentity
 
     public ArrowDefinition Definition => _definition;
     public PlayerID? Shooter => _shooter;
+    public Rigidbody Rigidbody => _rb;
+    public bool IsFlying => _flying;
+
+    /// <summary>Evento global al spawnearse cualquier flecha en la red (para que la cámara local la siga si es propia).</summary>
+    public static event System.Action<ArrowProjectile> OnAnyArrowSpawned;
+
+    /// <summary>Disparado cuando la flecha impacta contra cualquier superficie o jugador.</summary>
+    public event System.Action<Vector3> OnHit;
+
+    /// <summary>Disparado cuando la flecha frena o se destruye.</summary>
+    public event System.Action OnStopped;
 
     private void Awake() => _rb = GetComponent<Rigidbody>();
 
@@ -32,11 +43,14 @@ public class ArrowProjectile : NetworkIdentity
 
         if (isOwner)
             IgnoreOwnColliders();
+
+        OnAnyArrowSpawned?.Invoke(this);
     }
 
     protected override void OnDespawned(bool asServer)
     {
         _velocity.onChanged -= ApplyVelocity;
+        OnStopped?.Invoke();
     }
 
     // ESTE es el metodo que cambia:
@@ -105,10 +119,15 @@ public class ArrowProjectile : NetworkIdentity
                 Destroy(gameObject);
             }
             _flying = false;
+            OnHit?.Invoke(collision.GetContact(0).point);
+            OnStopped?.Invoke();
             return;
         }
 
         _flying = false;
+        Vector3 contactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
+        OnHit?.Invoke(contactPoint);
+        OnStopped?.Invoke();
 
         if (isServer)
         {
@@ -122,7 +141,7 @@ public class ArrowProjectile : NetworkIdentity
                     shooter = _shooter,
                     victim = victim.owner,
                     damage = _definition != null ? _definition.baseDamage : 0f,
-                    hitPoint = collision.GetContact(0).point,
+                    hitPoint = contactPoint,
                     effects = _definition != null ? _definition.effectsOnTarget : null
                 };
 
@@ -132,5 +151,11 @@ public class ArrowProjectile : NetworkIdentity
 
         _rb.isKinematic = true;
         transform.SetParent(collision.transform, true);
+    }
+
+    protected override void OnDestroy()
+    {
+        OnStopped?.Invoke();
+        base.OnDestroy();
     }
 }

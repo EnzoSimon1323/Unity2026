@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using PurrNet;
 using UnityEngine;
 
@@ -25,6 +25,15 @@ public class AimController : NetworkIdentity
     public bool IsAiming { get; private set; }
     public event Action<bool> OnAimingChanged;
     
+    /// <summary>Indica si un sistema externo (como ArrowFollowCamera) tiene el control exclusivo de la cámara.</summary>
+    public bool OverrideCameraControl { get; set; }
+
+    public void ForceIdle()
+    {
+        _arrowFollowStarted = true;
+        SetAiming(false);
+    }
+    
     [Header("Camara al apuntar (estilo primera persona)")]
     [SerializeField] private Vector3 normalCameraOffset = new Vector3(0f, 0f, -4.42f);
     [SerializeField] private Vector3 aimCameraOffset = new Vector3(0f, 0f, 0.05f);
@@ -33,6 +42,7 @@ public class AimController : NetworkIdentity
     private float _yaw;
     private float _pitch;
     private float _initialYaw;
+    private bool _arrowFollowStarted;
 
     private void Awake()
     {
@@ -80,22 +90,40 @@ public class AimController : NetworkIdentity
     {
         if (!isOwner) return;
 
-        // Si el jugador ya disparó en esta micro-ronda, queda congelado apuntando hacia donde tiró
-        bool isWaiting = shooter != null && shooter.HasShotThisRound;
+        bool hasShot = shooter != null && shooter.HasShotThisRound;
 
-        if (isWaiting)
+        if (!hasShot)
         {
-            // Forzar estado de apuntado activo mientras espera al rival (aunque suelte clic derecho)
+            _arrowFollowStarted = false;
+        }
+        else if (OverrideCameraControl)
+        {
+            _arrowFollowStarted = true;
+        }
+
+        if (OverrideCameraControl || _arrowFollowStarted)
+        {
+            // Una vez disparada la flecha / en cinemática o tras retornar la cámara,
+            // el bloqueo se rompe y el jugador permanece en Idle hasta que vuelva a apuntar en su nuevo turno.
+            SetAiming(false);
+        }
+        else if (hasShot)
+        {
+            // El jugador ya confirmó su tiro pero espera que el rival dispare:
+            // Queda apuntando fijado y bloqueado sin poder mover la mira ni la cámara.
             SetAiming(true);
         }
         else
         {
+            // Turno libre: solo apunta si mantiene presionado clic derecho
             bool aimingNow = Input.GetMouseButton(1);
             SetAiming(aimingNow);
         }
 
-        // Si está en espera, no se lee el mouse: la pantalla y la mira quedan congeladas
-        if (!isWaiting)
+        // Solo se lee el mouse si está en su turno libre (sin haber confirmado el tiro ni en cinemática)
+        bool canLook = !hasShot && !OverrideCameraControl;
+
+        if (canLook)
         {
             float sign = player != null && player.AxesInverted ? -1f : 1f;
             float sens = (player != null ? player.Sensitivity : 2f) * (IsAiming ? aimSensitivityMultiplier : 1f);
@@ -107,13 +135,14 @@ public class AimController : NetworkIdentity
             _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
         }
 
-        if (cameraPivot != null)
+        if (cameraPivot != null && !OverrideCameraControl)
             cameraPivot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
 
         if (bodyPivot != null)
             bodyPivot.rotation = Quaternion.Euler(0f, _yaw, 0f);
 
-        if (playerCamera != null)
+        // Solo actualizar posición y FOV si la cámara no está en modo seguimiento cinemático
+        if (playerCamera != null && !OverrideCameraControl)
         {
             Vector3 targetOffset = IsAiming ? aimCameraOffset : normalCameraOffset;
             playerCamera.transform.localPosition = Vector3.Lerp(

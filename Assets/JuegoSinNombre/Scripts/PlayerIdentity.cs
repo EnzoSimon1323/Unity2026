@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using PurrNet;
 
@@ -56,6 +56,11 @@ namespace JuegoSinNombre
                 if (GetComponent<PlayerTurnStatusUI>() == null)
                 {
                     gameObject.AddComponent<PlayerTurnStatusUI>();
+                }
+
+                if (GetComponent<ArrowFollowCamera>() == null)
+                {
+                    gameObject.AddComponent<ArrowFollowCamera>();
                 }
 
                 OnLocalPlayerSpawned?.Invoke(this);

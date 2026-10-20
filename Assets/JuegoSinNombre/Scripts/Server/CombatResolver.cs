@@ -16,7 +16,7 @@ namespace JuegoSinNombre
         {
             if (victim == null || hit.damage <= 0f) return;
 
-            victim.ApplyDamageServerRpc(hit.damage);
+            victim.ApplyDamage(hit.damage);
             OnHitResolved?.Invoke(hit, victim);
         }
     }

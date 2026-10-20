@@ -62,13 +62,19 @@ namespace JuegoSinNombre
             }
         }
         
-        [ServerRpc(requireOwnership: false)]
-        public void ApplyDamageServerRpc(float damage)
+        /// <summary>Aplica daño directamente en el servidor sin pasar por el módulo de RPCs.</summary>
+        public void ApplyDamage(float damage)
         {
             if (!isServer || IsDead || damage <= 0f) 
                 return;
 
             currentHealth.value = Mathf.Clamp(currentHealth.value - damage, 0f, _maxHealth);
+        }
+        
+        [ServerRpc(requireOwnership: false)]
+        public void ApplyDamageServerRpc(float damage)
+        {
+            ApplyDamage(damage);
         }
         
         [ServerRpc(requireOwnership: false)]
