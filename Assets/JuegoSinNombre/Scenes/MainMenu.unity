@@ -2045,6 +2045,7 @@ GameObject:
   - component: {fileID: 780618362}
   - component: {fileID: 780618361}
   - component: {fileID: 780618364}
+  - component: {fileID: 780618365}
   m_Layer: 0
   m_Name: PurrNet
   m_TagString: Untagged
@@ -2133,6 +2134,33 @@ MonoBehaviour:
   _ensureAllServersStart: 0
   _transports:
   - {fileID: 780618361}
+  - {fileID: 780618365}
+--- !u!114 &780618365
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 780618359}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 332e746c3c3253246aacad4d5559f1fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.Transports.PurrTransport
+  _masterServer: https://purrtransport.purrservers.com/
+  _roomName: 8fa273b0ad5a44d69ce55b49b1d603a0
+  _region: brazil
+  _host: purrtransport-brazil.purrservers.com
+  _timeoutInSeconds: 5
+  _useNat: 0
+  _natResolveTimeout: 8
+  _networkSimulation:
+    includeInBuild: 0
+    simulateLatency: 0
+    minLatency: 30
+    maxLatency: 100
+    simulatePacketLoss: 0
+    packetLossChance: 10
 --- !u!1 &819148828
 GameObject:
   m_ObjectHideFlags: 0
