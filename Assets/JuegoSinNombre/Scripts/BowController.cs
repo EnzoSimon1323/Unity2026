@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PurrNet;
 using UnityEngine;
 
@@ -31,12 +31,27 @@ public class BowController : NetworkIdentity
 
     private float _drawProgress;
 
+    private void Awake()
+    {
+        if (player == null) TryGetComponent(out player);
+        if (aim == null) TryGetComponent(out aim);
+        if (shooter == null) TryGetComponent(out shooter);
+        if (animator == null) TryGetComponent(out animator);
+    }
+
     private void Update()
     {
         if (!isOwner) return;
 
+        // Si el jugador ya disparó en esta micro-ronda, queda bloqueado esperando al rival
+        if (shooter != null && shooter.HasShotThisRound)
+        {
+            if (IsDrawing) CancelDraw();
+            return;
+        }
+
         // Sin apuntar no hay nada que tensar: primero se levanta el arco (clic derecho).
-        if (!player.CanShoot || !aim.IsAiming)
+        if (player == null || !player.CanShoot || aim == null || !aim.IsAiming)
         {
             if (IsDrawing) CancelDraw();
             return;
@@ -64,7 +79,7 @@ public class BowController : NetworkIdentity
 
     private void UpdateDraw()
     {
-        float duration = Mathf.Max(0.01f, drawTime * player.DrawTimeMultiplier);
+        float duration = Mathf.Max(0.01f, drawTime * (player != null ? player.DrawTimeMultiplier : 1f));
         _drawProgress = Mathf.MoveTowards(_drawProgress, 1f, Time.deltaTime / duration);
         SetTension(drawCurve.Evaluate(_drawProgress));
     }

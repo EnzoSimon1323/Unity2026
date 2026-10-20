@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,7 +17,7 @@ namespace JuegoSinNombre
     /// - Estructura de partida Maestra (al mejor de 3 o 5 rondas).
     /// - Detección de vida en 0 (currentHealth) para otorgar victoria de ronda.
     /// - Sincronización y secuenciación de micro-rondas de disparo:
-    ///   (Resolución de impacto -> Verificación de vida -> Pausa breve -> Reinicio de la siguiente flecha).
+    ///   (Espera de tiro de ambos jugadores -> Disparo simultáneo -> Resolución de impacto -> Siguiente micro-ronda).
     /// </summary>
     [DisallowMultipleComponent]
     public class GameManager : NetworkIdentity
@@ -46,7 +46,11 @@ namespace JuegoSinNombre
         public event Action<int, int> OnScoreChanged;
         public event Action<PlayerID?> OnMatchOver;
 
+        // Disparos pendientes para la micro-ronda actual
+        private readonly Dictionary<PlayerID, PendingShot> _pendingShots = new();
+
         private Coroutine _turnRoutine;
+        private Coroutine _resolvingWatchdogRoutine;
         private bool _isTransitioning;
 
         protected override void OnSpawned()
@@ -120,11 +124,13 @@ namespace JuegoSinNombre
             if (!isServer) return;
 
             if (_turnRoutine != null) StopCoroutine(_turnRoutine);
+            if (_resolvingWatchdogRoutine != null) StopCoroutine(_resolvingWatchdogRoutine);
 
             roundNumber.value = 1;
             player1Wins.value = 0;
             player2Wins.value = 0;
             _isTransitioning = false;
+            _pendingShots.Clear();
 
             StartRoundServer();
         }
@@ -151,6 +157,7 @@ namespace JuegoSinNombre
         private IEnumerator ServerMicroRoundCycle()
         {
             _isTransitioning = false;
+            _pendingShots.Clear();
 
             // Fase: Inicio de micro-ronda
             currentPhase.value = RoundPhase.RoundStart;
@@ -160,10 +167,107 @@ namespace JuegoSinNombre
             currentPhase.value = RoundPhase.ConsumableWindow;
             yield return new WaitForSeconds(1.0f);
 
-            // Fase: Apuntado y Disparo (Desbloquear arcos)
+            // Fase: Apuntado y Disparo (Desbloquear arcos y habilitar 1 tiro por jugador)
             currentPhase.value = RoundPhase.Aiming;
             SetAllPlayersCanShoot(true);
-            Debug.Log("[GameManager] Fase Aiming: Arcos desbloqueados. ¡Apunten y disparen!");
+            Debug.Log("[GameManager] Fase Aiming: Arcos desbloqueados. Esperando a que ambos jugadores apunten y disparen...");
+        }
+
+        /// <summary>
+        /// Recibe la intención de tiro de un jugador. Cuando ambos jugadores hayan disparado,
+        /// se lanzan las dos flechas simultáneamente.
+        /// </summary>
+        public void RegisterPendingShotServer(PendingShot shot)
+        {
+            if (!isServer) return;
+            if (currentPhase.value != RoundPhase.Aiming) return;
+            if (_pendingShots.ContainsKey(shot.shooter)) return;
+
+            _pendingShots[shot.shooter] = shot;
+            Debug.Log($"[GameManager] Tiro registrado de jugador {shot.shooter}. ({_pendingShots.Count}/{PlayerIdentity.allPlayers.Count} listos)");
+
+            // Bloquear el arco para que no pueda volver a disparar en esta micro-ronda
+            if (shot.shooterIdentity != null && shot.shooterIdentity.TryGetComponent(out ArcherPlayer archer))
+            {
+                archer.SetCanShoot(false);
+            }
+
+            // Cuando todos los jugadores activos en la partida hayan disparado
+            int targetCount = Mathf.Max(1, PlayerIdentity.allPlayers.Count);
+            if (_pendingShots.Count >= targetCount)
+            {
+                ExecuteSimultaneousShotsServer();
+            }
+        }
+
+        private void ExecuteSimultaneousShotsServer()
+        {
+            if (!isServer) return;
+
+            Debug.Log($"<color=yellow><b>[GameManager] ¡Ambos jugadores listos! Lanzando flechas simultáneas ({_pendingShots.Count})...</b></color>");
+            currentPhase.value = RoundPhase.Resolving;
+            SetAllPlayersCanShoot(false);
+
+            foreach (var kvp in _pendingShots)
+            {
+                SpawnAndLaunchArrowServer(kvp.Value);
+            }
+
+            _pendingShots.Clear();
+
+            // Watchdog: si ambas flechas fallan (pegan en suelo/pared o vuelan fuera), avanzar tras timeout
+            if (_resolvingWatchdogRoutine != null) StopCoroutine(_resolvingWatchdogRoutine);
+            _resolvingWatchdogRoutine = StartCoroutine(ServerResolvingWatchdogRoutine());
+        }
+
+        private void SpawnAndLaunchArrowServer(PendingShot shot)
+        {
+            if (shot.arrowDef == null || shot.arrowDef.prefab == null) return;
+
+            GameObject go = Instantiate(shot.arrowDef.prefab, shot.spawnPosition, Quaternion.LookRotation(shot.direction));
+
+            if (!go.TryGetComponent(out ArrowProjectile arrow))
+            {
+                Debug.LogError($"El prefab de {shot.arrowDef.displayName} no tiene ArrowProjectile.", go);
+                Destroy(go);
+                return;
+            }
+
+            if (shot.shooterIdentity != null)
+            {
+                var arrowColliders = go.GetComponentsInChildren<Collider>(true);
+                var ownColliders = shot.shooterIdentity.GetComponentsInChildren<Collider>(true);
+                foreach (var arrowCol in arrowColliders)
+                {
+                    if (arrowCol == null) continue;
+                    foreach (var col in ownColliders)
+                    {
+                        if (col != null)
+                            Physics.IgnoreCollision(arrowCol, col, true);
+                    }
+                }
+            }
+
+            if (go.TryGetComponent(out NetworkIdentity identity))
+                identity.GiveOwnership(shot.shooter);
+
+            arrow.Launch(shot.arrowDef, shot.direction, shot.speed, shot.shooter);
+        }
+
+        /// <summary>
+        /// Resguardo de resolución: si ninguna flecha impacta a un jugador (ambos erraron el tiro),
+        /// la fase de resolución concluye automáticamente tras el tiempo de vuelo esperado.
+        /// </summary>
+        private IEnumerator ServerResolvingWatchdogRoutine()
+        {
+            yield return new WaitForSeconds(_impactResolutionWait + 3.0f);
+
+            if (currentPhase.value == RoundPhase.Resolving && !_isTransitioning)
+            {
+                Debug.Log("[GameManager] Watchdog: Tiempo de vuelo concluido sin impactos directos (tiros fallados). Pasando a Outcome...");
+                if (_turnRoutine != null) StopCoroutine(_turnRoutine);
+                _turnRoutine = StartCoroutine(ServerProcessImpactAndTransition(null));
+            }
         }
 
         /// <summary>
@@ -172,6 +276,12 @@ namespace JuegoSinNombre
         private void HandleHitResolvedServer(ArrowHitInfo hit, HealthModule victim)
         {
             if (!isServer || _isTransitioning) return;
+
+            if (_resolvingWatchdogRoutine != null)
+            {
+                StopCoroutine(_resolvingWatchdogRoutine);
+                _resolvingWatchdogRoutine = null;
+            }
 
             // Si estábamos en apuntado o resolución, iniciamos la transición
             if (currentPhase.value == RoundPhase.Aiming || currentPhase.value == RoundPhase.Resolving)
@@ -187,6 +297,12 @@ namespace JuegoSinNombre
         private void HandleAnyPlayerDiedServer(HealthModule deadPlayer)
         {
             if (!isServer) return;
+
+            if (_resolvingWatchdogRoutine != null)
+            {
+                StopCoroutine(_resolvingWatchdogRoutine);
+                _resolvingWatchdogRoutine = null;
+            }
 
             if (currentPhase.value != RoundPhase.GameOver && !_isTransitioning)
             {
@@ -210,7 +326,6 @@ namespace JuegoSinNombre
             // 1. Resolución de impacto: bloquear arcos inmediatamente
             SetAllPlayersCanShoot(false);
             currentPhase.value = RoundPhase.Resolving;
-            Debug.Log("[GameManager] Fase Resolving: Flecha impactó. Analizando resultado...");
 
             // Pausa breve de lectura de impacto
             yield return new WaitForSeconds(_impactResolutionWait);
@@ -339,9 +454,16 @@ namespace JuegoSinNombre
 
             foreach (var kvp in PlayerIdentity.allPlayers)
             {
-                if (kvp.Value != null && kvp.Value.TryGetComponent(out ArcherPlayer archer))
+                if (kvp.Value == null) continue;
+
+                if (kvp.Value.TryGetComponent(out ArcherPlayer archer))
                 {
                     archer.SetCanShoot(canShoot);
+                }
+
+                if (canShoot && kvp.Value.TryGetComponent(out PlayerShooter shooter))
+                {
+                    shooter.ResetRoundShotRpc();
                 }
             }
         }
@@ -349,6 +471,8 @@ namespace JuegoSinNombre
         private void ResetAllPlayersHealthAndState()
         {
             if (!isServer) return;
+
+            _pendingShots.Clear();
 
             foreach (var kvp in PlayerIdentity.allPlayers)
             {
@@ -371,6 +495,11 @@ namespace JuegoSinNombre
                 {
                     archer.ResetModifiers();
                     archer.SetCanShoot(false);
+                }
+
+                if (kvp.Value.TryGetComponent(out PlayerShooter shooter))
+                {
+                    shooter.ResetRoundShotRpc();
                 }
             }
         }

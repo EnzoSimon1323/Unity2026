@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PurrNet;
 using UnityEngine;
 
@@ -6,6 +6,7 @@ public class AimController : NetworkIdentity
 {
     [Header("Referencias")]
     [SerializeField] private ArcherPlayer player;
+    [SerializeField] private PlayerShooter shooter;
     [SerializeField] private Transform cameraPivot;
     [SerializeField] private Transform bodyPivot;
     [SerializeField] private Camera playerCamera;
@@ -28,11 +29,17 @@ public class AimController : NetworkIdentity
     [SerializeField] private Vector3 normalCameraOffset = new Vector3(0f, 0f, -4.42f);
     [SerializeField] private Vector3 aimCameraOffset = new Vector3(0f, 0f, 0.05f);
     [SerializeField] private float cameraMoveSpeed = 8f;
-    
 
     private float _yaw;
     private float _pitch;
     private float _initialYaw;
+
+    private void Awake()
+    {
+        if (player == null) TryGetComponent(out player);
+        if (shooter == null) TryGetComponent(out shooter);
+        if (animator == null) TryGetComponent(out animator);
+    }
 
     protected override void OnSpawned(bool asServer)
     {
@@ -40,9 +47,9 @@ public class AimController : NetworkIdentity
 
         if (!isOwner) return;
 
-        _initialYaw = cameraPivot.eulerAngles.y;
+        _initialYaw = cameraPivot != null ? cameraPivot.eulerAngles.y : transform.eulerAngles.y;
         _yaw = _initialYaw;
-        _pitch = cameraPivot.eulerAngles.x;
+        _pitch = cameraPivot != null ? cameraPivot.eulerAngles.x : 0f;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -55,6 +62,16 @@ public class AimController : NetworkIdentity
 
     private void HandleAimingChanged(bool aiming)
     {
+        IsAiming = aiming;
+        if (animator != null) animator.SetBool(isAimingParam, aiming);
+        OnAimingChanged?.Invoke(aiming);
+    }
+
+    private void SetAiming(bool aiming)
+    {
+        if (IsAiming == aiming) return;
+        IsAiming = aiming;
+        _isAiming.value = aiming;
         if (animator != null) animator.SetBool(isAimingParam, aiming);
         OnAimingChanged?.Invoke(aiming);
     }
@@ -63,39 +80,49 @@ public class AimController : NetworkIdentity
     {
         if (!isOwner) return;
 
-        bool aimingNow = Input.GetMouseButton(1);
-        if (aimingNow != IsAiming)
+        // Si el jugador ya disparó en esta micro-ronda, queda congelado apuntando hacia donde tiró
+        bool isWaiting = shooter != null && shooter.HasShotThisRound;
+
+        if (isWaiting)
         {
-            IsAiming = aimingNow;
-            if (animator != null) animator.SetBool(isAimingParam, IsAiming);
+            // Forzar estado de apuntado activo mientras espera al rival (aunque suelte clic derecho)
+            SetAiming(true);
+        }
+        else
+        {
+            bool aimingNow = Input.GetMouseButton(1);
+            SetAiming(aimingNow);
         }
 
-        float sign = player.AxesInverted ? -1f : 1f;
-        float sens = player.Sensitivity * (IsAiming ? aimSensitivityMultiplier : 1f);
+        // Si está en espera, no se lee el mouse: la pantalla y la mira quedan congeladas
+        if (!isWaiting)
+        {
+            float sign = player != null && player.AxesInverted ? -1f : 1f;
+            float sens = (player != null ? player.Sensitivity : 2f) * (IsAiming ? aimSensitivityMultiplier : 1f);
 
-        _yaw += Input.GetAxisRaw("Mouse X") * sens * sign;
-        _pitch -= Input.GetAxisRaw("Mouse Y") * sens * sign;
+            _yaw += Input.GetAxisRaw("Mouse X") * sens * sign;
+            _pitch -= Input.GetAxisRaw("Mouse Y") * sens * sign;
 
-        _yaw = Mathf.Clamp(_yaw, _initialYaw - maxYawOffset, _initialYaw + maxYawOffset);
-        _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
+            _yaw = Mathf.Clamp(_yaw, _initialYaw - maxYawOffset, _initialYaw + maxYawOffset);
+            _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
+        }
 
-        cameraPivot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+        if (cameraPivot != null)
+            cameraPivot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
 
         if (bodyPivot != null)
             bodyPivot.rotation = Quaternion.Euler(0f, _yaw, 0f);
 
-        if (playerCamera != null)
-            playerCamera.fieldOfView = player.Fov * (IsAiming ? aimFovMultiplier : 1f);
-        
         if (playerCamera != null)
         {
             Vector3 targetOffset = IsAiming ? aimCameraOffset : normalCameraOffset;
             playerCamera.transform.localPosition = Vector3.Lerp(
                 playerCamera.transform.localPosition, targetOffset, Time.deltaTime * cameraMoveSpeed);
 
-            playerCamera.fieldOfView = player.Fov * (IsAiming ? aimFovMultiplier : 1f);
+            float baseFov = player != null ? player.Fov : 60f;
+            playerCamera.fieldOfView = baseFov * (IsAiming ? aimFovMultiplier : 1f);
         }
     }
 
-    public Vector3 AimDirection => cameraPivot.forward;
+    public Vector3 AimDirection => cameraPivot != null ? cameraPivot.forward : transform.forward;
 }

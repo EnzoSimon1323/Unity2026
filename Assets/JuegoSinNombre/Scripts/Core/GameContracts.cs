@@ -1,4 +1,4 @@
-using PurrNet;
+﻿using PurrNet;
 using UnityEngine;
 
 /// <summary>
@@ -50,4 +50,18 @@ public struct ArrowHitInfo
 
     /// <summary>True si la victima es el que disparo (splash propio).</summary>
     public bool IsSelfHit => shooter.HasValue && victim.HasValue && shooter.Value == victim.Value;
+}
+
+/// <summary>
+/// Representa la intención de disparo de un jugador en la micro-ronda actual.
+/// Guardado por el servidor en la fase Aiming y ejecutado simultáneamente cuando ambos jugadores dispararon.
+/// </summary>
+public struct PendingShot
+{
+    public PlayerID shooter;
+    public Vector3 spawnPosition;
+    public Vector3 direction;
+    public float speed;
+    public ArrowDefinition arrowDef;
+    public NetworkIdentity shooterIdentity;
 }

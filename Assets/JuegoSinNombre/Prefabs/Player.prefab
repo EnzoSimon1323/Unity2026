@@ -445,7 +445,6 @@ GameObject:
   - component: {fileID: 5332230635311595454}
   - component: {fileID: 2000733977527221683}
   - component: {fileID: 6044584296957834912}
-  - component: {fileID: 5332368801571412074}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -592,6 +591,7 @@ MonoBehaviour:
   _invertedPathToNearestParent: 
   _directChildren: []
   player: {fileID: 5332230635311595454}
+  shooter: {fileID: 6044584296957834912}
   cameraPivot: {fileID: 5097325959320179880}
   bodyPivot: {fileID: 3024399195877579062}
   playerCamera: {fileID: 1130339829164792812}
@@ -709,28 +709,6 @@ MonoBehaviour:
   spawnHeight: 0.5
   spawnForwardOffset: 0.5
   aim: {fileID: 6381136078616373014}
-  ownCollider: {fileID: 2046342699540855489}
---- !u!114 &5332368801571412074
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7213731774504215223}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 174dd60353e36784696718f26bd2157d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoundPhaseStub
-  _networkRules: {fileID: 0}
-  _visitiblityRules: {fileID: 0}
-  _isSetup: 0
-  _prefabId: -2147483648
-  _componentIndex: -2147483648
-  _shouldBePooled: 0
-  _parent: {fileID: 0}
-  _invertedPathToNearestParent: 
-  _directChildren: []
   player: {fileID: 5332230635311595454}
 --- !u!1 &9161069024552230771
 GameObject:
@@ -1026,11 +1004,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 3304582864495704230}
   m_SourcePrefab: {fileID: 100100000, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
---- !u!136 &2046342699540855489 stripped
-CapsuleCollider:
-  m_CorrespondingSourceObject: {fileID: 3221858912984593448, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
-  m_PrefabInstance: {fileID: 3517388599698378473}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &2179162242503862673 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3381559866046097272, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}

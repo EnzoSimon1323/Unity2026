@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using PurrNet;
 
@@ -53,6 +53,11 @@ namespace JuegoSinNombre
 
             if (isOwner)
             {
+                if (GetComponent<PlayerTurnStatusUI>() == null)
+                {
+                    gameObject.AddComponent<PlayerTurnStatusUI>();
+                }
+
                 OnLocalPlayerSpawned?.Invoke(this);
             }
         }
