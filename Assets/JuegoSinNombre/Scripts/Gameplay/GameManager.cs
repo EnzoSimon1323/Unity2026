@@ -6,6 +6,7 @@ using PurrNet;
 using JuegoSinNombre.Core;
 
 namespace JuegoSinNombre.Gameplay
+{
 
     /// <summary>
     /// Servidor y Host autoritativo del ciclo de juego:
