@@ -53,11 +53,6 @@ namespace JuegoSinNombre.Gameplay
 
             if (isOwner)
             {
-                if (GetComponent<ArrowFollowCamera>() == null)
-                {
-                    gameObject.AddComponent<ArrowFollowCamera>();
-                }
-
                 OnLocalPlayerSpawned?.Invoke(this);
             }
         }

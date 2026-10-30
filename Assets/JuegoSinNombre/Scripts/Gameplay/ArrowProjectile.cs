@@ -127,6 +127,9 @@ namespace JuegoSinNombre.Gameplay
 
             _flying = false;
             Vector3 contactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
+            Vector3 flightDirection = _rb != null && _rb.linearVelocity.sqrMagnitude > 0.01f ? _rb.linearVelocity.normalized : transform.forward;
+            float arrowSpeed = _rb != null ? _rb.linearVelocity.magnitude : 0f;
+
             OnHit?.Invoke(contactPoint);
             OnStopped?.Invoke();
 
@@ -137,16 +140,34 @@ namespace JuegoSinNombre.Gameplay
 
                 if (victim != null && health != null)
                 {
+                    DamageHitbox hitbox = collision.gameObject.GetComponent<DamageHitbox>();
+                    if (hitbox == null && collision.collider != null)
+                    {
+                        hitbox = collision.collider.GetComponent<DamageHitbox>();
+                    }
+
+                    BodyPartType bodyPart = hitbox != null ? hitbox.BodyPart : BodyPartType.Torso;
+                    float multiplier = hitbox != null ? hitbox.DamageMultiplier : 1.0f;
+                    float baseDamage = _definition != null ? _definition.baseDamage : 0f;
+                    float finalDamage = baseDamage * multiplier;
+
+                    RagdollController ragdoll = hitbox != null && hitbox.RagdollController != null
+                        ? hitbox.RagdollController
+                        : collision.gameObject.GetComponentInParent<RagdollController>();
+
                     var hit = new ArrowHitInfo
                     {
                         shooter = _shooter,
                         victim = victim.owner,
-                        damage = _definition != null ? _definition.baseDamage : 0f,
+                        damage = finalDamage,
                         hitPoint = contactPoint,
+                        bodyPart = bodyPart,
+                        damageMultiplier = multiplier,
                         effects = _definition != null ? _definition.effectsOnTarget : null
                     };
 
-                    CombatResolver.ResolveHit(hit, health);
+                    float impulseForce = arrowSpeed * (_rb != null ? _rb.mass : 0.1f) * 80f;
+                    CombatResolver.ResolveHit(hit, health, ragdoll, flightDirection, impulseForce);
                 }
             }
 

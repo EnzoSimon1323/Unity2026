@@ -60,6 +60,8 @@ namespace JuegoSinNombre.Core
         public PlayerID? victim;
         public float damage;
         public Vector3 hitPoint;
+        public BodyPartType bodyPart;
+        public float damageMultiplier;
 
         /// <summary>Los efectos de la flecha. El EffectRunner los aplica, el HealthModule solo mira el daño.</summary>
         public EffectDefinition[] effects;

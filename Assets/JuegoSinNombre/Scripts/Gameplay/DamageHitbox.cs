@@ -18,6 +18,7 @@ namespace JuegoSinNombre.Gameplay
         public BodyPartType BodyPart => _bodyPart;
         public float DamageMultiplier => _damageMultiplier;
         public HealthModule HealthModule => _healthModule;
+        public RagdollController RagdollController => _ragdollController;
 
         private void Awake()
         {
@@ -66,7 +67,7 @@ namespace JuegoSinNombre.Gameplay
                 return;
 
             float calculatedDamage = baseDamage * _damageMultiplier;
-            _healthModule.ApplyDamageServerRpc(calculatedDamage);
+            _healthModule.ApplyDamage(calculatedDamage);
 
             if (_healthModule.IsDead && _ragdollController != null && impulseForce > 0f)
             {
