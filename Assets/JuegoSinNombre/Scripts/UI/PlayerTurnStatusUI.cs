@@ -24,7 +24,7 @@ namespace JuegoSinNombre.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInitialize()
         {
-            if (FindFirstObjectByType<PlayerTurnStatusUI>() == null)
+            if (FindAnyObjectByType<PlayerTurnStatusUI>() == null)
             {
                 var go = new GameObject("[PlayerTurnStatusUI]");
                 go.AddComponent<PlayerTurnStatusUI>();
