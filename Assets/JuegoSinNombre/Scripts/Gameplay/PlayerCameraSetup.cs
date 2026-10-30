@@ -1,7 +1,7 @@
 using UnityEngine;
 using PurrNet;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
     public class PlayerCameraSetup : NetworkIdentity
     {

@@ -1,8 +1,10 @@
-﻿using System;
+using System;
 using UnityEngine;
 using TMPro;
+using JuegoSinNombre.Core;
+using JuegoSinNombre.Gameplay;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.UI
 {
     /// <summary>
     /// UI temporal para indicar el estado del jugador durante la micro-ronda:
@@ -18,6 +20,17 @@ namespace JuegoSinNombre
         [Header("Estilo OnGUI Fallback")]
         [SerializeField] private bool _enableOnGuiFallback = true;
         [SerializeField] private int _fontSize = 18;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoInitialize()
+        {
+            if (FindFirstObjectByType<PlayerTurnStatusUI>() == null)
+            {
+                var go = new GameObject("[PlayerTurnStatusUI]");
+                go.AddComponent<PlayerTurnStatusUI>();
+                DontDestroyOnLoad(go);
+            }
+        }
 
         private PlayerIdentity _localPlayer;
         private ArcherPlayer _archer;

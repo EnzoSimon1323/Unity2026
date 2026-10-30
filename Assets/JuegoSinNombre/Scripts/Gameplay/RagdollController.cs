@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
     [DisallowMultipleComponent]
     public class RagdollController : MonoBehaviour

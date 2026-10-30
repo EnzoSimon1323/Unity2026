@@ -1,7 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace JuegoSinNombre
+using JuegoSinNombre.Core;
+using JuegoSinNombre.Gameplay;
+
+namespace JuegoSinNombre.UI
 {
     public class WorldHealthBar : MonoBehaviour
     {

@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using PurrNet;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
     public class HealthModule : NetworkIdentity
     {

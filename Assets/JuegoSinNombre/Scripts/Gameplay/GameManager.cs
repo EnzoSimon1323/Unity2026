@@ -1,16 +1,11 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using PurrNet;
+using JuegoSinNombre.Core;
 
-namespace JuegoSinNombre
-{
-    public enum MatchFormat
-    {
-        BestOf3 = 3,
-        BestOf5 = 5
-    }
+namespace JuegoSinNombre.Gameplay
 
     /// <summary>
     /// Servidor y Host autoritativo del ciclo de juego:

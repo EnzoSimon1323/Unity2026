@@ -5,7 +5,9 @@ using PurrNet.Transports;
 
 using TMPro;
 
-namespace JuegoSinNombre
+using JuegoSinNombre.Core;
+
+namespace JuegoSinNombre.Gameplay
 {
     [DisallowMultipleComponent]
     public class NetworkRoomController : MonoBehaviour

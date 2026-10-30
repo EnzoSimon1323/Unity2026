@@ -1,15 +1,8 @@
 using UnityEngine;
+using JuegoSinNombre.Core;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
-    public enum BodyPartType
-    {
-        Torso,
-        Head,
-        Arm,
-        Leg
-    }
-
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
     public class DamageHitbox : MonoBehaviour

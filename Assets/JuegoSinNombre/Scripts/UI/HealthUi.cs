@@ -3,7 +3,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-namespace JuegoSinNombre
+using JuegoSinNombre.Core;
+using JuegoSinNombre.Gameplay;
+
+namespace JuegoSinNombre.UI
 {
     public class HealthUi : MonoBehaviour
     {

@@ -1,7 +1,8 @@
 using System;
 using UnityEngine;
+using JuegoSinNombre.Core;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
     /// <summary>
     /// Cámara cinemática de seguimiento de flecha (Kill/Flight Cam).
@@ -83,14 +84,11 @@ namespace JuegoSinNombre
             if (_aimController != null)
             {
                 if (_playerCamera == null)
-                    _playerCamera = GetComponentInChildren<Camera>(true);
+                    _playerCamera = _aimController.PlayerCamera != null ? _aimController.PlayerCamera : GetComponentInChildren<Camera>(true);
 
                 if (_cameraPivot == null)
                 {
-                    var pivotField = typeof(AimController).GetField("cameraPivot", 
-                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    if (pivotField != null)
-                        _cameraPivot = pivotField.GetValue(_aimController) as Transform;
+                    _cameraPivot = _aimController.CameraPivot;
                 }
             }
 

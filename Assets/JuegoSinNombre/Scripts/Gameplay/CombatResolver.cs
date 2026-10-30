@@ -1,7 +1,8 @@
 using PurrNet;
 using UnityEngine;
+using JuegoSinNombre.Core;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
     /// <summary>
     /// Resuelve el impacto de una flecha. Por ahora solo aplica daño;

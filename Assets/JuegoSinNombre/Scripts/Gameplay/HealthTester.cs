@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
     public class HealthTester : MonoBehaviour
     {

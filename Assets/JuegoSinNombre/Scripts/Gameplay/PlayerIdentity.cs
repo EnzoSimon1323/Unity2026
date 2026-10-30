@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using PurrNet;
 
-namespace JuegoSinNombre
+namespace JuegoSinNombre.Gameplay
 {
     [DisallowMultipleComponent]
     public class PlayerIdentity : PlayerIdentity<PlayerIdentity>
@@ -53,11 +53,6 @@ namespace JuegoSinNombre
 
             if (isOwner)
             {
-                if (GetComponent<PlayerTurnStatusUI>() == null)
-                {
-                    gameObject.AddComponent<PlayerTurnStatusUI>();
-                }
-
                 if (GetComponent<ArrowFollowCamera>() == null)
                 {
                     gameObject.AddComponent<ArrowFollowCamera>();
