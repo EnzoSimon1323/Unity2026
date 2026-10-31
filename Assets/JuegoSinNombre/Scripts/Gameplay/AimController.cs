@@ -48,6 +48,7 @@ namespace JuegoSinNombre.Gameplay
         private float _pitch;
         private float _initialYaw;
         private bool _arrowFollowStarted;
+        private Quaternion _defaultCameraLocalRot = Quaternion.identity;
 
         private void Awake()
         {
@@ -65,6 +66,9 @@ namespace JuegoSinNombre.Gameplay
             _initialYaw = cameraPivot != null ? cameraPivot.eulerAngles.y : transform.eulerAngles.y;
             _yaw = _initialYaw;
             _pitch = cameraPivot != null ? cameraPivot.eulerAngles.x : 0f;
+
+            if (playerCamera != null)
+                _defaultCameraLocalRot = playerCamera.transform.localRotation;
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -146,18 +150,22 @@ namespace JuegoSinNombre.Gameplay
             if (bodyPivot != null)
                 bodyPivot.rotation = Quaternion.Euler(0f, _yaw, 0f);
 
-            // Solo actualizar posición y FOV si la cámara no está en modo seguimiento cinemático
+            // Solo actualizar posición, rotación y FOV si la cámara no está en modo seguimiento cinemático
             if (playerCamera != null && !OverrideCameraControl)
             {
                 Vector3 targetOffset = IsAiming ? aimCameraOffset : normalCameraOffset;
                 playerCamera.transform.localPosition = Vector3.Lerp(
                     playerCamera.transform.localPosition, targetOffset, Time.deltaTime * cameraMoveSpeed);
 
+                Quaternion targetRot = IsAiming ? Quaternion.identity : _defaultCameraLocalRot;
+                playerCamera.transform.localRotation = Quaternion.Slerp(
+                    playerCamera.transform.localRotation, targetRot, Time.deltaTime * cameraMoveSpeed);
+
                 float baseFov = player != null ? player.Fov : 60f;
                 playerCamera.fieldOfView = baseFov * (IsAiming ? aimFovMultiplier : 1f);
             }
         }
 
-        public Vector3 AimDirection => cameraPivot != null ? cameraPivot.forward : transform.forward;
+        public Vector3 AimDirection => (IsAiming && playerCamera != null) ? playerCamera.transform.forward : (cameraPivot != null ? cameraPivot.forward : transform.forward);
     }
 }

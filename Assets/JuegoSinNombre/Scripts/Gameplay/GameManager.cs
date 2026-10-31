@@ -49,6 +49,11 @@ namespace JuegoSinNombre.Gameplay
         private Coroutine _resolvingWatchdogRoutine;
         private bool _isTransitioning;
 
+        private void Awake()
+        {
+            NetworkTypeRegistry.RegisterNetworkTypes();
+        }
+
         protected override void OnSpawned()
         {
             base.OnSpawned();

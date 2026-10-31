@@ -19,6 +19,9 @@ namespace JuegoSinNombre.Gameplay
         private bool _flying;
 
         private readonly SyncVar<Vector3> _velocity = new(Vector3.zero);
+        private readonly SyncVar<float> _mass = new(0.1f);
+        private readonly SyncVar<float> _windMultiplier = new(1.0f);
+        private readonly SyncVar<bool> _alignToVelocity = new(true);
 
         public ArrowDefinition Definition => _definition;
         public PlayerID? Shooter => _shooter;
@@ -39,9 +42,13 @@ namespace JuegoSinNombre.Gameplay
         protected override void OnSpawned(bool asServer)
         {
             _velocity.onChanged += ApplyVelocity;
+            _mass.onChanged += HandleMassChanged;
 
             if (_velocity.value.sqrMagnitude > 0.0001f)
                 ApplyVelocity(_velocity.value);
+
+            if (_rb != null && _mass.value > 0f)
+                _rb.mass = _mass.value;
 
             if (isOwner)
                 IgnoreOwnColliders();
@@ -52,7 +59,14 @@ namespace JuegoSinNombre.Gameplay
         protected override void OnDespawned(bool asServer)
         {
             _velocity.onChanged -= ApplyVelocity;
+            _mass.onChanged -= HandleMassChanged;
             OnStopped?.Invoke();
+        }
+
+        private void HandleMassChanged(float newMass)
+        {
+            if (_rb != null && newMass > 0f)
+                _rb.mass = newMass;
         }
 
         private void IgnoreOwnColliders()
@@ -87,6 +101,10 @@ namespace JuegoSinNombre.Gameplay
             _definition = definition;
             _shooter = shooter;
 
+            _mass.value = definition.mass;
+            _windMultiplier.value = definition.windMultiplier;
+            _alignToVelocity.value = definition.alignToVelocity;
+
             _rb.mass = definition.mass;
             _velocity.value = direction * speed;
 
@@ -95,22 +113,27 @@ namespace JuegoSinNombre.Gameplay
 
         private void FixedUpdate()
         {
-            if (!_flying || _definition == null) return;
+            if (!_flying) return;
 
-            if (_definition.windMultiplier != 0f && WindManager.Instance != null)
+            float windMult = _definition != null ? _definition.windMultiplier : _windMultiplier.value;
+            if (windMult != 0f && WindManager.Instance != null)
             {
                 _rb.AddForce(
-                    WindManager.Instance.Wind * _definition.windMultiplier,
+                    WindManager.Instance.Wind * windMult,
                     ForceMode.Acceleration);
             }
 
-            if (_definition.alignToVelocity && _rb.linearVelocity.sqrMagnitude > 0.01f)
+            bool align = _definition != null ? _definition.alignToVelocity : _alignToVelocity.value;
+            if (align && _rb.linearVelocity.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.LookRotation(_rb.linearVelocity);
         }
 
         private void OnCollisionEnter(Collision collision)
         {
             if (!_flying) return;
+
+            string endpoint = isServer ? "SERVER" : "CLIENT";
+            Debug.Log($"[ArrowProjectile] Colisión en {endpoint}: impactó con '{collision.gameObject.name}' (layer: {LayerMask.LayerToName(collision.gameObject.layer)})");
 
             if (collision.gameObject.TryGetComponent(out ArrowProjectile other))
             {
