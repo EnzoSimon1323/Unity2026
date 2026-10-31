@@ -1686,8 +1686,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 2106583019}
-        m_TargetAssemblyTypeName: JuegoSinNombre.NetworkRoomController, Assembly-CSharp
-        m_MethodName: StartMatch
+        m_TargetAssemblyTypeName: JuegoSinNombre.Gameplay.NetworkRoomController, JuegoSinNombre.Gameplay
+        m_MethodName: ChangeToGameplayScene
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4337,7 +4337,6 @@ MonoBehaviour:
   _startMatchButton: {fileID: 699223296}
   _roomCodeLength: 5
   _gameplaySceneName: Test
-  _compositeTransport: {fileID: 780618364}
 --- !u!4 &2106583020
 Transform:
   m_ObjectHideFlags: 0

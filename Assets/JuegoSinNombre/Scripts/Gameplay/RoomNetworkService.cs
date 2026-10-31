@@ -53,6 +53,11 @@ namespace JuegoSinNombre.Gameplay
                 return;
             }
 
+            if (NetworkManager.main.isClient || NetworkManager.main.isServer)
+            {
+                Disconnect();
+            }
+
             IsHostSession = true;
             LocalPlayerName = !string.IsNullOrWhiteSpace(playerName) ? playerName.Trim() : "Jugador";
             CurrentRoomCode = GenerateRandomRoomCode(roomCodeLength);
@@ -110,6 +115,11 @@ namespace JuegoSinNombre.Gameplay
                 }
             }
 
+            if (NetworkManager.main != null && (NetworkManager.main.isClient || NetworkManager.main.isServer))
+            {
+                Disconnect();
+            }
+
             PurrTransport purrTransport = GetActiveTransport<PurrTransport>();
             UDPTransport udpTransport = GetActiveTransport<UDPTransport>();
 
@@ -117,34 +127,75 @@ namespace JuegoSinNombre.Gameplay
             bool isUdpActive = (NetworkManager.main != null && NetworkManager.main.transport is UDPTransport) ||
                                (udpTransport != null && purrTransport == null);
 
-            if (isUdpActive || isIpAddress)
+            if (NetworkManager.main != null && NetworkManager.main.transport is CompositeTransport composite)
             {
-                string destinationIp = isIpAddress ? targetAddress : defaultAddress;
-
-                if (udpTransport != null)
+                if (isUdpActive || isIpAddress)
                 {
-                    udpTransport.address = destinationIp;
-                    udpTransport.serverPort = targetPort;
-                }
+                    string destinationIp = isIpAddress ? targetAddress : defaultAddress;
+                    if (udpTransport != null)
+                    {
+                        udpTransport.address = destinationIp;
+                        udpTransport.serverPort = targetPort;
+                    }
 
-                if (NetworkManager.main != null && udpTransport != null)
+                    if (composite.clientTransport != udpTransport)
+                    {
+                        if (composite.clientTransport != null && composite.clientTransport.transport.clientState != ConnectionState.Disconnected)
+                        {
+                            composite.clientTransport.transport.Disconnect();
+                        }
+                        composite.SetClientTransport<UDPTransport>();
+                    }
+
+                    Debug.Log($"[RoomNetworkService] Conectando por UDPTransport a {destinationIp}:{targetPort}");
+                    targetAddress = destinationIp;
+                }
+                else if (purrTransport != null)
                 {
-                    NetworkManager.main.transport = udpTransport;
-                }
+                    targetAddress = targetAddress.ToUpperInvariant();
+                    purrTransport.roomName = targetAddress;
 
-                Debug.Log($"[RoomNetworkService] Conectando por UDPTransport a {destinationIp}:{targetPort}");
-                targetAddress = destinationIp;
+                    if (composite.clientTransport != purrTransport)
+                    {
+                        if (composite.clientTransport != null && composite.clientTransport.transport.clientState != ConnectionState.Disconnected)
+                        {
+                            composite.clientTransport.transport.Disconnect();
+                        }
+                        composite.SetClientTransport<PurrTransport>();
+                    }
+
+                    Debug.Log($"[RoomNetworkService] Conectando a sala PurrTransport: '{targetAddress}'");
+                }
             }
-            else if (purrTransport != null)
+            else
             {
-                purrTransport.roomName = targetAddress;
-
-                if (NetworkManager.main != null)
+                if (isUdpActive || isIpAddress)
                 {
-                    NetworkManager.main.transport = purrTransport;
-                }
+                    string destinationIp = isIpAddress ? targetAddress : defaultAddress;
+                    if (udpTransport != null)
+                    {
+                        udpTransport.address = destinationIp;
+                        udpTransport.serverPort = targetPort;
+                    }
 
-                Debug.Log($"[RoomNetworkService] Conectando a sala PurrTransport: '{targetAddress}'");
+                    if (NetworkManager.main != null && udpTransport != null && NetworkManager.main.transport != udpTransport)
+                    {
+                        NetworkManager.main.transport = udpTransport;
+                    }
+
+                    Debug.Log($"[RoomNetworkService] Conectando por UDPTransport a {destinationIp}:{targetPort}");
+                    targetAddress = destinationIp;
+                }
+                else if (purrTransport != null)
+                {
+                    purrTransport.roomName = targetAddress;
+                    if (NetworkManager.main != null && NetworkManager.main.transport != purrTransport)
+                    {
+                        NetworkManager.main.transport = purrTransport;
+                    }
+
+                    Debug.Log($"[RoomNetworkService] Conectando a sala PurrTransport: '{targetAddress}'");
+                }
             }
 
             if (NetworkManager.main == null)
@@ -201,6 +252,12 @@ namespace JuegoSinNombre.Gameplay
             if (NetworkManager.main.isServer)
             {
                 NetworkManager.main.StopServer();
+            }
+
+            var emptyScene = UnityEngine.SceneManagement.SceneManager.GetSceneByName("EmptyScene");
+            if (emptyScene.isLoaded)
+            {
+                UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(emptyScene);
             }
 
             IsHostSession = false;

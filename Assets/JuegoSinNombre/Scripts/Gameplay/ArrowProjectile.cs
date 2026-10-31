@@ -37,7 +37,16 @@ namespace JuegoSinNombre.Gameplay
         /// <summary>Disparado cuando la flecha frena o se destruye.</summary>
         public event System.Action OnStopped;
 
-        private void Awake() => _rb = GetComponent<Rigidbody>();
+        private void Awake()
+        {
+            _rb = GetComponent<Rigidbody>();
+            if (_rb != null)
+            {
+                // Iniciar cinemático hasta recibir la velocidad inicial, evitando que la gravedad
+                // empiece a desviar la flecha antes de que el vector de disparo sea aplicado.
+                _rb.isKinematic = true;
+            }
+        }
 
         protected override void OnSpawned(bool asServer)
         {
@@ -89,8 +98,14 @@ namespace JuegoSinNombre.Gameplay
 
         private void ApplyVelocity(Vector3 v)
         {
-            _rb.AddForce(v, ForceMode.VelocityChange);
-            _flying = v.sqrMagnitude > 0.0001f;
+            if (v.sqrMagnitude <= 0.0001f) return;
+
+            if (_rb != null)
+            {
+                _rb.isKinematic = false;
+                _rb.linearVelocity = v;
+            }
+            _flying = true;
         }
 
         /// <summary>Lo llama PlayerShooter.ShootServerRpc, siempre en el servidor.</summary>
@@ -105,8 +120,14 @@ namespace JuegoSinNombre.Gameplay
             _windMultiplier.value = definition.windMultiplier;
             _alignToVelocity.value = definition.alignToVelocity;
 
-            _rb.mass = definition.mass;
-            _velocity.value = direction * speed;
+            if (_rb != null)
+            {
+                _rb.mass = definition.mass;
+            }
+
+            Vector3 initialVel = direction * speed;
+            _velocity.value = initialVel;
+            ApplyVelocity(initialVel);
 
             Destroy(gameObject, lifeTime);
         }
