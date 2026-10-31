@@ -27,12 +27,12 @@ namespace JuegoSinNombre.Gameplay
         [SerializeField] private float _nextMicroRoundDelay = 1.5f;
 
         [Header("Network State")]
-        public readonly SyncVar<RoundPhase> currentPhase = new(RoundPhase.WaitingForPlayers);
+        public readonly SyncVar<int> currentPhase = new((int)RoundPhase.WaitingForPlayers);
         public readonly SyncVar<int> roundNumber = new(1);
         public readonly SyncVar<int> player1Wins = new(0);
         public readonly SyncVar<int> player2Wins = new(0);
 
-        public RoundPhase CurrentPhase => currentPhase.value;
+        public RoundPhase CurrentPhase => (RoundPhase)currentPhase.value;
         public int RoundNumber => roundNumber.value;
         public int Player1Wins => player1Wins.value;
         public int Player2Wins => player2Wins.value;
@@ -89,9 +89,9 @@ namespace JuegoSinNombre.Gameplay
             base.OnDespawned(asServer);
         }
 
-        private void HandlePhaseChanged(RoundPhase newPhase)
+        private void HandlePhaseChanged(int newPhaseInt)
         {
-            OnPhaseChanged?.Invoke(newPhase);
+            OnPhaseChanged?.Invoke((RoundPhase)newPhaseInt);
         }
 
         private void HandleScoreChanged(int _)
@@ -107,7 +107,7 @@ namespace JuegoSinNombre.Gameplay
         {
             if (!isServer) yield break;
 
-            currentPhase.value = RoundPhase.WaitingForPlayers;
+            currentPhase.value = (int)RoundPhase.WaitingForPlayers;
             Debug.Log("[GameManager] Servidor en espera de jugadores...");
 
             while (PlayerIdentity.allPlayers.Count < 2)
@@ -161,15 +161,15 @@ namespace JuegoSinNombre.Gameplay
             _pendingShots.Clear();
 
             // Fase: Inicio de micro-ronda
-            currentPhase.value = RoundPhase.RoundStart;
+            currentPhase.value = (int)RoundPhase.RoundStart;
             yield return new WaitForSeconds(0.5f);
 
             // Fase: Ventana de Consumibles
-            currentPhase.value = RoundPhase.ConsumableWindow;
+            currentPhase.value = (int)RoundPhase.ConsumableWindow;
             yield return new WaitForSeconds(1.0f);
 
             // Fase: Apuntado y Disparo (Desbloquear arcos y habilitar 1 tiro por jugador)
-            currentPhase.value = RoundPhase.Aiming;
+            currentPhase.value = (int)RoundPhase.Aiming;
             SetAllPlayersCanShoot(true);
             Debug.Log("[GameManager] Fase Aiming: Arcos desbloqueados. Esperando a que ambos jugadores apunten y disparen...");
         }
@@ -181,7 +181,7 @@ namespace JuegoSinNombre.Gameplay
         public void RegisterPendingShotServer(PendingShot shot)
         {
             if (!isServer) return;
-            if (currentPhase.value != RoundPhase.Aiming) return;
+            if (CurrentPhase != RoundPhase.Aiming) return;
             if (_pendingShots.ContainsKey(shot.shooter)) return;
 
             _pendingShots[shot.shooter] = shot;
@@ -206,7 +206,7 @@ namespace JuegoSinNombre.Gameplay
             if (!isServer) return;
 
             Debug.Log($"<color=yellow><b>[GameManager] ¡Ambos jugadores listos! Lanzando flechas simultáneas ({_pendingShots.Count})...</b></color>");
-            currentPhase.value = RoundPhase.Resolving;
+            currentPhase.value = (int)RoundPhase.Resolving;
             SetAllPlayersCanShoot(false);
 
             foreach (var kvp in _pendingShots)
@@ -229,7 +229,7 @@ namespace JuegoSinNombre.Gameplay
         {
             yield return new WaitForSeconds(_impactResolutionWait + 3.0f);
 
-            if (currentPhase.value == RoundPhase.Resolving && !_isTransitioning)
+            if (CurrentPhase == RoundPhase.Resolving && !_isTransitioning)
             {
                 Debug.Log("[GameManager] Watchdog: Tiempo de vuelo concluido sin impactos directos (tiros fallados). Pasando a Outcome...");
                 if (_turnRoutine != null) StopCoroutine(_turnRoutine);
@@ -251,7 +251,7 @@ namespace JuegoSinNombre.Gameplay
             }
 
             // Si estábamos en apuntado o resolución, iniciamos la transición
-            if (currentPhase.value == RoundPhase.Aiming || currentPhase.value == RoundPhase.Resolving)
+            if (CurrentPhase == RoundPhase.Aiming || CurrentPhase == RoundPhase.Resolving)
             {
                 if (_turnRoutine != null) StopCoroutine(_turnRoutine);
                 _turnRoutine = StartCoroutine(ServerProcessImpactAndTransition(victim));
@@ -271,7 +271,7 @@ namespace JuegoSinNombre.Gameplay
                 _resolvingWatchdogRoutine = null;
             }
 
-            if (currentPhase.value != RoundPhase.GameOver && !_isTransitioning)
+            if (CurrentPhase != RoundPhase.GameOver && !_isTransitioning)
             {
                 if (_turnRoutine != null) StopCoroutine(_turnRoutine);
                 _turnRoutine = StartCoroutine(ServerProcessImpactAndTransition(deadPlayer));
@@ -292,13 +292,13 @@ namespace JuegoSinNombre.Gameplay
 
             // 1. Resolución de impacto: bloquear arcos inmediatamente
             SetAllPlayersCanShoot(false);
-            currentPhase.value = RoundPhase.Resolving;
+            currentPhase.value = (int)RoundPhase.Resolving;
 
             // Pausa breve de lectura de impacto
             yield return new WaitForSeconds(_impactResolutionWait);
 
             // 2. Verificación de vida: Pasar a Outcome
-            currentPhase.value = RoundPhase.Outcome;
+            currentPhase.value = (int)RoundPhase.Outcome;
             yield return new WaitForSeconds(0.5f);
 
             // Verificar si algún jugador murió (currentHealth <= 0)
@@ -399,7 +399,7 @@ namespace JuegoSinNombre.Gameplay
         {
             if (!isServer) return;
 
-            currentPhase.value = RoundPhase.GameOver;
+            currentPhase.value = (int)RoundPhase.GameOver;
             Debug.Log($"<color=yellow><b>[GameManager] ¡FIN DE LA PARTIDA MAESTRA! Ganador: {matchWinner}</b></color>");
 
             NotifyMatchOverObserversRpc(matchWinner);

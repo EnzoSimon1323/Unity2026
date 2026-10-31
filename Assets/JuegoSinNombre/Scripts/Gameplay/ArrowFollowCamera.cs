@@ -122,6 +122,9 @@ namespace JuegoSinNombre.Gameplay
         {
             if (arrow == null) return;
 
+            if (_archerPlayer == null) TryGetComponent(out _archerPlayer);
+            if (_archerPlayer != null && !_archerPlayer.isOwner) return;
+
             // Solo seguir la flecha si pertenece al jugador local
             if (!arrow.isOwner) return;
 

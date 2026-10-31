@@ -35,6 +35,7 @@ namespace JuegoSinNombre.Gameplay
 
         public void ForceIdle()
         {
+            if (!isOwner) return;
             _arrowFollowStarted = true;
             SetAiming(false);
         }
@@ -88,6 +89,7 @@ namespace JuegoSinNombre.Gameplay
 
         private void SetAiming(bool aiming)
         {
+            if (!isOwner) return;
             if (IsAiming == aiming) return;
             IsAiming = aiming;
             _isAiming.value = aiming;
