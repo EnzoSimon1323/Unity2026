@@ -113,7 +113,7 @@ namespace JuegoSinNombre.Gameplay
             else
             {
                 // Fallback de disparo directo si se testea en escenas sin GameManager
-                SpawnAndLaunchDirectServer(def, spawnPosition, direction, speed);
+                ArrowSpawner.SpawnAndLaunch(def, spawnPosition, direction, speed, owner, this);
             }
         }
 
@@ -123,35 +123,6 @@ namespace JuegoSinNombre.Gameplay
         {
             _hasShotThisRound = false;
             OnShotStatusChanged?.Invoke(false);
-        }
-
-        private void SpawnAndLaunchDirectServer(ArrowDefinition def, Vector3 spawnPosition, Vector3 direction, float speed)
-        {
-            GameObject go = Instantiate(def.prefab, spawnPosition, Quaternion.LookRotation(direction));
-
-            if (!go.TryGetComponent(out ArrowProjectile arrow))
-            {
-                Debug.LogError($"El prefab de {def.displayName} no tiene ArrowProjectile.", go);
-                Destroy(go);
-                return;
-            }
-
-            var arrowColliders = go.GetComponentsInChildren<Collider>(true);
-            var ownColliders = GetComponentsInChildren<Collider>(true);
-            foreach (var arrowCol in arrowColliders)
-            {
-                if (arrowCol == null) continue;
-                foreach (var col in ownColliders)
-                {
-                    if (col != null)
-                        Physics.IgnoreCollision(arrowCol, col, true);
-                }
-            }
-
-            if (go.TryGetComponent(out NetworkIdentity identity))
-                identity.GiveOwnership(owner);
-
-            arrow.Launch(def, direction, speed, owner);
         }
     }
 }

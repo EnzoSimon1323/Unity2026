@@ -206,7 +206,7 @@ namespace JuegoSinNombre.Gameplay
 
             foreach (var kvp in _pendingShots)
             {
-                SpawnAndLaunchArrowServer(kvp.Value);
+                ArrowSpawner.SpawnAndLaunch(kvp.Value);
             }
 
             _pendingShots.Clear();
@@ -214,40 +214,6 @@ namespace JuegoSinNombre.Gameplay
             // Watchdog: si ambas flechas fallan (pegan en suelo/pared o vuelan fuera), avanzar tras timeout
             if (_resolvingWatchdogRoutine != null) StopCoroutine(_resolvingWatchdogRoutine);
             _resolvingWatchdogRoutine = StartCoroutine(ServerResolvingWatchdogRoutine());
-        }
-
-        private void SpawnAndLaunchArrowServer(PendingShot shot)
-        {
-            if (shot.arrowDef == null || shot.arrowDef.prefab == null) return;
-
-            GameObject go = Instantiate(shot.arrowDef.prefab, shot.spawnPosition, Quaternion.LookRotation(shot.direction));
-
-            if (!go.TryGetComponent(out ArrowProjectile arrow))
-            {
-                Debug.LogError($"El prefab de {shot.arrowDef.displayName} no tiene ArrowProjectile.", go);
-                Destroy(go);
-                return;
-            }
-
-            if (shot.shooterIdentity != null)
-            {
-                var arrowColliders = go.GetComponentsInChildren<Collider>(true);
-                var ownColliders = shot.shooterIdentity.GetComponentsInChildren<Collider>(true);
-                foreach (var arrowCol in arrowColliders)
-                {
-                    if (arrowCol == null) continue;
-                    foreach (var col in ownColliders)
-                    {
-                        if (col != null)
-                            Physics.IgnoreCollision(arrowCol, col, true);
-                    }
-                }
-            }
-
-            if (go.TryGetComponent(out NetworkIdentity identity))
-                identity.GiveOwnership(shot.shooter);
-
-            arrow.Launch(shot.arrowDef, shot.direction, shot.speed, shot.shooter);
         }
 
         /// <summary>
