@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &49897450204918004
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8041544378262970262}
+  - component: {fileID: 429858332507953018}
+  - component: {fileID: 1849993877147261165}
+  m_Layer: 0
+  m_Name: EndMatchController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8041544378262970262
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 49897450204918004}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -43.84815, y: 0, z: 2.0327199}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &429858332507953018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 49897450204918004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e25c8de1d5a490e408e963785eadbb92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JuegoSinNombre.Gameplay::JuegoSinNombre.Gameplay.MatchEndPresenter
+  _endgameCamera: {fileID: 0}
+  _winnerStagePoint: {fileID: 0}
+  _loserStagePoint: {fileID: 0}
+  _stageCameraPoint: {fileID: 0}
+  _loserOffsetFromWinner: {x: 1.4, y: 0, z: 1.6}
+  _cameraOffsetFromCenter: {x: 0, y: 1.25, z: -3.2}
+  _lookAtHeight: 1.3
+  _winnerAnimationTrigger: Victory
+  _presentationDelay: 0.6
+--- !u!114 &1849993877147261165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 49897450204918004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b90312d8095401a4c9efc1cfd69e1af8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JuegoSinNombre.UI::JuegoSinNombre.UI.MatchEndUI
+  _gameplayHudToHide: {fileID: 0}
+  _victoryDefeatPanel: {fileID: 0}
+  _resultTitleText: {fileID: 0}
+  _scoreText: {fileID: 0}
+  _returnToMenuButton: {fileID: 0}
+  _victoryColor: {r: 0.18, g: 0.85, b: 0.35, a: 1}
+  _defeatColor: {r: 0.92, g: 0.22, b: 0.22, a: 1}
+  _mainMenuSceneName: MainMenu
+  _enableOnGuiFallback: 1
+  _panelRoot: {fileID: 0}
