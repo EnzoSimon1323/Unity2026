@@ -153,13 +153,7 @@ namespace JuegoSinNombre.Gameplay
 
             // 1. Restaurar vida y estado de todos los jugadores
             ResetAllPlayersHealthAndState();
-
-            // 2. Rollear viento si está disponible
-            if (WindManager.Instance != null)
-            {
-                WindManager.Instance.RollWind();
-            }
-
+            
             // 3. Comenzar ciclo de micro-ronda de disparo
             _turnRoutine = StartCoroutine(ServerMicroRoundCycle());
         }
@@ -171,6 +165,10 @@ namespace JuegoSinNombre.Gameplay
 
             // Fase: Inicio de micro-ronda
             currentPhase.value = (int)RoundPhase.RoundStart;
+            
+            if (WindManager.Instance != null)
+                WindManager.Instance.RollWind();
+            
             yield return new WaitForSeconds(0.5f);
 
             // Fase: Ventana de Consumibles
@@ -339,12 +337,6 @@ namespace JuegoSinNombre.Gameplay
                 // Ambos siguen en pie: Pausa breve y preparar la siguiente flecha (micro-ronda)
                 Debug.Log($"[GameManager] Ambos arqueros siguen con vida. Preparando siguiente micro-ronda en {_nextMicroRoundDelay}s...");
                 yield return new WaitForSeconds(_nextMicroRoundDelay);
-
-                // Caducan efectos o se rueda viento si corresponde
-                if (WindManager.Instance != null)
-                {
-                    WindManager.Instance.RollWind();
-                }
 
                 _turnRoutine = StartCoroutine(ServerMicroRoundCycle());
             }

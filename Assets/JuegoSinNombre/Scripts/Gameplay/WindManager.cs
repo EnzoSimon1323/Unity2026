@@ -46,10 +46,17 @@ namespace JuegoSinNombre.Gameplay
         {
             if (!isServer) return;
 
-            Vector2 dir = Random.insideUnitCircle.normalized;
-            float speed = Random.Range(minSpeed, maxSpeed);
+            Vector3[] cardinalDirections =
+            {
+                Vector3.right,   // +X
+                Vector3.left,    // -X
+                Vector3.forward, // +Z
+                Vector3.back     // -Z
+            };
 
-            _wind.value = new Vector3(dir.x, 0f, dir.y) * speed;
+            Vector3 dir = cardinalDirections[Random.Range(0, cardinalDirections.Length)];
+            float speed = Random.Range(minSpeed, maxSpeed);
+            _wind.value = dir * speed;
         }
 
         private void HandleWindChanged(Vector3 newWind) => OnWindChanged?.Invoke(newWind);
