@@ -156,6 +156,39 @@ namespace JuegoSinNombre.Gameplay
             SetRagdollState(false);
         }
 
+        /// <summary>
+        /// Reposiciona al personaje y colapsa el ragdoll en las coordenadas deseadas sin arrastrar velocidades previas.
+        /// </summary>
+        public void TeleportAndCollapse(Vector3 position, Quaternion rotation)
+        {
+            SetRagdollState(false);
+
+            transform.position = position;
+            transform.rotation = rotation;
+
+            if (TryGetComponent(out Rigidbody rootRb))
+            {
+                rootRb.linearVelocity = Vector3.zero;
+                rootRb.angularVelocity = Vector3.zero;
+                rootRb.position = position;
+                rootRb.rotation = rotation;
+            }
+
+            if (_ragdollRigidbodies != null)
+            {
+                for (int i = 0; i < _ragdollRigidbodies.Length; i++)
+                {
+                    if (_ragdollRigidbodies[i] != null)
+                    {
+                        _ragdollRigidbodies[i].linearVelocity = Vector3.zero;
+                        _ragdollRigidbodies[i].angularVelocity = Vector3.zero;
+                    }
+                }
+            }
+
+            SetRagdollState(true);
+        }
+
         public void ApplyImpactForce(Vector3 force, Vector3 hitPoint, float explosionRadius = 0.5f)
         {
             if (!_isRagdollActive)
