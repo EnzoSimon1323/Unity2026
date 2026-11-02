@@ -20,6 +20,10 @@ namespace JuegoSinNombre.Gameplay
     {
         public static GameManager Instance { get; private set; }
 
+        public static event Action<GameManager> OnGameManagerSpawned;
+        public static event Action<PlayerID?> OnMatchOverGlobal;
+        public static event Action<RoundPhase> OnPhaseChangedGlobal;
+
         [Header("Match Settings")]
         [SerializeField] private MatchFormat _matchFormat = MatchFormat.BestOf3;
         [SerializeField] private float _impactResolutionWait = 1.0f;
@@ -37,6 +41,7 @@ namespace JuegoSinNombre.Gameplay
         public int Player1Wins => player1Wins.value;
         public int Player2Wins => player2Wins.value;
         public int WinsNeeded => ((int)_matchFormat / 2) + 1;
+        public PlayerID? MatchWinner { get; private set; }
 
         public event Action<RoundPhase> OnPhaseChanged;
         public event Action<int, int> OnScoreChanged;
@@ -58,6 +63,7 @@ namespace JuegoSinNombre.Gameplay
         {
             base.OnSpawned();
             Instance = this;
+            OnGameManagerSpawned?.Invoke(this);
 
             currentPhase.onChanged += HandlePhaseChanged;
             player1Wins.onChanged += HandleScoreChanged;
@@ -91,7 +97,9 @@ namespace JuegoSinNombre.Gameplay
 
         private void HandlePhaseChanged(int newPhaseInt)
         {
-            OnPhaseChanged?.Invoke((RoundPhase)newPhaseInt);
+            RoundPhase phase = (RoundPhase)newPhaseInt;
+            OnPhaseChanged?.Invoke(phase);
+            OnPhaseChangedGlobal?.Invoke(phase);
         }
 
         private void HandleScoreChanged(int _)
@@ -130,6 +138,7 @@ namespace JuegoSinNombre.Gameplay
             roundNumber.value = 1;
             player1Wins.value = 0;
             player2Wins.value = 0;
+            MatchWinner = null;
             _isTransitioning = false;
             _pendingShots.Clear();
 
@@ -392,6 +401,7 @@ namespace JuegoSinNombre.Gameplay
             if (!isServer) return;
 
             currentPhase.value = (int)RoundPhase.GameOver;
+            SetAllPlayersCanShoot(false);
             Debug.Log($"<color=yellow><b>[GameManager] ¡FIN DE LA PARTIDA MAESTRA! Ganador: {matchWinner}</b></color>");
 
             NotifyMatchOverObserversRpc(matchWinner);
@@ -400,7 +410,10 @@ namespace JuegoSinNombre.Gameplay
         [ObserversRpc(runLocally: true)]
         private void NotifyMatchOverObserversRpc(PlayerID? matchWinner)
         {
+            MatchWinner = matchWinner;
+            Debug.Log($"<color=yellow>[GameManager] ObserversRpc recibido: Notificando OnMatchOver. Ganador: {matchWinner}</color>");
             OnMatchOver?.Invoke(matchWinner);
+            OnMatchOverGlobal?.Invoke(matchWinner);
         }
 
         // =========================================================================

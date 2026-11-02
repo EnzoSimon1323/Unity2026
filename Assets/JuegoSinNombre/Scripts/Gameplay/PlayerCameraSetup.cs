@@ -11,6 +11,22 @@ namespace JuegoSinNombre.Gameplay
         [Tooltip("El AudioListener de este jugador (solo se activará para el jugador local).")]
         [SerializeField] private AudioListener _audioListener;
 
+        public Camera PlayerCamera => _playerCamera;
+        public AudioListener AudioListener => _audioListener;
+
+        public void SetCameraActive(bool active)
+        {
+            if (_playerCamera != null)
+            {
+                _playerCamera.gameObject.SetActive(active);
+            }
+
+            if (_audioListener != null)
+            {
+                _audioListener.enabled = active;
+            }
+        }
+
         protected override void OnSpawned()
         {
             base.OnSpawned();

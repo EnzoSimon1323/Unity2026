@@ -61,6 +61,14 @@ namespace JuegoSinNombre.UI
 
         private void OnEnable()
         {
+            GameManager.OnMatchOverGlobal += HandleMatchOver;
+            GameManager.OnPhaseChangedGlobal += HandlePhaseChanged;
+
+            if (GameManager.Instance != null && GameManager.Instance.CurrentPhase == RoundPhase.GameOver)
+            {
+                Hide();
+            }
+
             if (_healthModule != null && _healthModule.currentHealth != null)
             {
                 _healthModule.currentHealth.onChanged += UpdateHealthBar;
@@ -69,9 +77,33 @@ namespace JuegoSinNombre.UI
 
         private void OnDisable()
         {
+            GameManager.OnMatchOverGlobal -= HandleMatchOver;
+            GameManager.OnPhaseChangedGlobal -= HandlePhaseChanged;
+
             if (_healthModule != null && _healthModule.currentHealth != null)
             {
                 _healthModule.currentHealth.onChanged -= UpdateHealthBar;
+            }
+        }
+
+        private void HandleMatchOver(PurrNet.PlayerID? _)
+        {
+            Hide();
+        }
+
+        private void HandlePhaseChanged(RoundPhase phase)
+        {
+            if (phase == RoundPhase.GameOver)
+            {
+                Hide();
+            }
+        }
+
+        public void Hide()
+        {
+            if (_container != null)
+            {
+                _container.SetActive(false);
             }
         }
 
