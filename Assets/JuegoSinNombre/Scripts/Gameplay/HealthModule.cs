@@ -77,13 +77,19 @@ namespace JuegoSinNombre.Gameplay
             ApplyDamage(damage);
         }
         
-        [ServerRpc(requireOwnership: false)]
-        public void HealServerRpc(float amount)
+        /// <summary>Aplica curación directamente en el servidor sin pasar por el módulo de RPCs.</summary>
+        public void ApplyHeal(float amount)
         {
             if (!isServer || IsDead || amount <= 0f) 
                 return;
 
             currentHealth.value = Mathf.Clamp(currentHealth.value + amount, 0f, _maxHealth);
+        }
+
+        [ServerRpc(requireOwnership: false)]
+        public void HealServerRpc(float amount)
+        {
+            ApplyHeal(amount);
         }
 
         [ServerRpc(requireOwnership: false)]

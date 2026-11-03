@@ -38,6 +38,12 @@ namespace JuegoSinNombre.Core
         [Tooltip("Impacta al rival aunque no le apunten (Buscadora de Apolo). Lo resuelve el servidor.")]
         public bool homing;
 
+        [Tooltip("Velocidad de giro de corrección hacia el torso del rival (Buscadora de Apolo).")]
+        public float homingTurnSpeed = 3f;
+
+        [Tooltip("Porcentaje del daño causado que se transfiere como curación al tirador (Lamia: 0.35 = 35%).")]
+        [Range(0f, 1f)] public float lifestealRatio = 0f;
+
         [Tooltip("Radio de daño en area. 0 = impacto puntual.")]
         public float splashRadius;
 

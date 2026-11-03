@@ -174,10 +174,16 @@ namespace JuegoSinNombre.UI
 
             Debug.Log($"<color=magenta><b>[MatchEndUI] Desplegando UI de fin de partida. Ganador: {matchWinner}</b></color>");
 
-            // 1. Apagar el HUD de juego (barra de vida) al terminar la ronda maestra
+            // 1. Apagar el HUD de juego (barra de vida, quiver táctico) al terminar la ronda maestra
             if (_gameplayHudToHide != null)
             {
                 _gameplayHudToHide.SetActive(false);
+            }
+
+            var slotMachine = FindAnyObjectByType<ArrowSlotMachineUI>();
+            if (slotMachine != null)
+            {
+                slotMachine.gameObject.SetActive(false);
             }
 
             // Ocultar las barras flotantes de los personajes enemigos
