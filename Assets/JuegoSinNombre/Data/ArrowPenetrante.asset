@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: ArrowPenetrante
   m_EditorClassIdentifier: Assembly-CSharp::ArrowDefinition
   displayName: Flecha Penetrante
-  icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  description: 'Flecha ultra-ligera y letal. Causa un daño crítico enorme, pero es muy vulnerable al viento.'
+  icon: {fileID: 21300000, guid: c92af95d9c17b7142893bbab7b8fbdaa, type: 3}
+  description: "Flecha ultra-ligera y letal. Causa un da\xF1o cr\xEDtico enorme, pero es muy vulnerable al viento."
   prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
   launchSpeedMultiplier: 1.25
   mass: 0.05

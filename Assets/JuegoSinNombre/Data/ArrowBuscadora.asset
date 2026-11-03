@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: ArrowBuscadora
   m_EditorClassIdentifier: Assembly-CSharp::ArrowDefinition
   displayName: Flecha Buscadora
-  icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  description: 'Guiada por la bendición de Apolo hacia el torso del oponente. No puede impactar en la cabeza.'
+  icon: {fileID: 21300000, guid: c0ec42a052deef846a1c4c550f54cc23, type: 3}
+  description: "Guiada por la bendici\xF3n de Apolo hacia el torso del oponente. No puede impactar en la cabeza."
   prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
   launchSpeedMultiplier: 0.95
   mass: 0.1

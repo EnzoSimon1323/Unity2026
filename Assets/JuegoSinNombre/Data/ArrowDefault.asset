@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ArrowDefault
   m_EditorClassIdentifier: Assembly-CSharp::ArrowDefinition
   displayName: Flecha
-  icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  icon: {fileID: 21300000, guid: 729ce3860ebeeb04592223e3ebd13071, type: 3}
   description: 
   prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
   launchSpeedMultiplier: 1
@@ -22,6 +22,8 @@ MonoBehaviour:
   alignToVelocity: 1
   baseDamage: 25
   homing: 0
+  homingTurnSpeed: 3
+  lifestealRatio: 0
   splashRadius: 0
   effectsOnTarget: []
   effectsOnShooter: []

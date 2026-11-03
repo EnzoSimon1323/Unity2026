@@ -80,6 +80,9 @@ namespace JuegoSinNombre.UI
         [Tooltip("Escala final en la esquina inferior derecha.")]
         [SerializeField] private float _hudScale = 0.95f;
 
+        [Tooltip("Tamaño del sprite/icono de la flecha dentro de la ranura.")]
+        [SerializeField] private Vector2 _iconSize = new Vector2(70f, 70f);
+
         [Header("Tiempos de Ruleta (segundos)")]
         [SerializeField] private float _spinDurationSlot0 = 1.0f;
         [SerializeField] private float _spinDurationSlot1 = 1.65f;
@@ -310,6 +313,16 @@ namespace JuegoSinNombre.UI
                 {
                     var ic = sRect.Find("ReelContent/ArrowIcon") ?? sRect.Find("ArrowIcon") ?? sRect.Find("Icon");
                     if (ic != null) _slots[i].arrowIcon = ic.GetComponent<Image>();
+                }
+
+                if (_slots[i].arrowIcon != null)
+                {
+                    _slots[i].arrowIcon.color = Color.white;
+                    _slots[i].arrowIcon.preserveAspect = true;
+                    if (_iconSize.x > 0f && _iconSize.y > 0f)
+                    {
+                        _slots[i].arrowIcon.rectTransform.sizeDelta = _iconSize;
+                    }
                 }
 
                 if (_slots[i].nameText == null)
@@ -577,7 +590,12 @@ namespace JuegoSinNombre.UI
             Color themeColor = GetArrowThemeColor(def);
             if (view.arrowIcon != null)
             {
-                view.arrowIcon.color = themeColor;
+                view.arrowIcon.color = Color.white;
+                view.arrowIcon.preserveAspect = true;
+                if (_iconSize.x > 0f && _iconSize.y > 0f)
+                {
+                    view.arrowIcon.rectTransform.sizeDelta = _iconSize;
+                }
                 if (def.icon != null) view.arrowIcon.sprite = def.icon;
             }
 

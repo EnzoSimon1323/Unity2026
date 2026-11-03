@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: ArrowVampirica
   m_EditorClassIdentifier: Assembly-CSharp::ArrowDefinition
   displayName: Flecha Vampirica
-  icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  description: 'Drena la fuerza vital del oponente, curando al tirador un 35% del daño infligido.'
+  icon: {fileID: 21300000, guid: f1f39a8bc5136874c9059bc79545d084, type: 3}
+  description: "Drena la fuerza vital del oponente, curando al tirador un 35% del da\xF1o infligido."
   prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
-  launchSpeedMultiplier: 1.0
+  launchSpeedMultiplier: 1
   mass: 0.1
-  windMultiplier: 1.0
+  windMultiplier: 1
   alignToVelocity: 1
   baseDamage: 25
   homing: 0
