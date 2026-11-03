@@ -142,7 +142,7 @@ namespace JuegoSinNombre.UI
 
             ComputeCurrentStatus(out _rawMessage, out _lastFormattedMessage, out _currentColor);
 
-            if (_statusText != null)
+            if (_statusText != null && _statusText.text != _lastFormattedMessage)
             {
                 _statusText.text = _lastFormattedMessage;
             }

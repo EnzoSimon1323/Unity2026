@@ -11,14 +11,16 @@
 El núcleo de la experiencia combina:
 - **Balística física realista**: Trayectorias parabólicas gobernadas por masa, velocidad inicial, gravedad y un sistema dinámico de viento tridimensional.
 - **Mano Táctica de 3 Flechas (Arsenal Dinámico)**: Selección estratégica de flechas especiales con reparto procedimental y presentación visual mediante una ruleta estilo tragamonedas (*Slot Machine*).
+- **Estelas Visuales Cinemáticas (Trail System)**: Identificación visual inmediata de cada tipo de flecha mediante un sistema procedimental de `TrailRenderer` sincronizado en red (`ConfigureTrailObserversRpc`), con curvas de conicidad y apagado de emisión en colisión.
 - **Efectos de Estado Temporales**: Mecánicas de control (congelamiento/pesadez de mira, veneno continuo, inversión de ejes, visión borrosa con blur post-procesado y robo de vida).
 - **Cálculo Anatómico de Daño**: Zonas de impacto diferenciadas (*Headshot* crítico x2.0, *Torso* x1.0, *Extremidades* x0.75) conectadas a simulación física de **Ragdoll** y cámaras cinemáticas de impacto y victoria.
+- **Telemetría y Rendimiento de Grado Profesional**: Monitor de rendimiento en tiempo real integrado (`PerformanceTelemetryMonitor`), arquitectura *zero-allocation* y perfiles verificados en ejecución a **245-270 FPS** (3.7 - 4.1 ms).
 
 ### 1.2 Stack Tecnológico
 - **Motor**: Unity 6 (6000.x)
 - **Pipeline de Renderizado**: Universal Render Pipeline (URP)
-- **Networking Framework**: **PurrNet** (Arquitectura autoritativa en servidor con replicación reactiva mediante `SyncVar` y RPCs optimizados)
-- **Texto y Gráficos UI**: TextMeshPro con fuente personalizada (*PirataOne-Regular*) y Canvas interactivos
+- **Networking Framework**: **PurrNet** (Arquitectura autoritativa en servidor con replicación reactiva mediante `SyncVar` y RPCs optimizados con buffers para reconexión)
+- **Texto y Gráficos UI**: TextMeshPro con fuente personalizada (*PirataOne-Regular*) y Canvas optimizados contra re-batching innecesario
 - **Módulo de Entrada**: Unity Input System moderno + teclado/mouse tradicional
 
 ---
@@ -50,8 +52,8 @@ El proyecto implementa una arquitectura desacoplada organizada formalmente media
 | Ensamblado | Dependencias | Responsabilidad |
 | :--- | :--- | :--- |
 | **`JuegoSinNombre.Core`** | `PurrNet` | **Capa Fundamental Agnóstica**. Define contratos (`IEffectTarget`, `IWindProvider`), tipos de datos de red (`ArrowHitInfo`, `PendingShot`), enums globales (`RoundPhase`, `BodyPartType`, `MatchFormat`) y los ScriptableObjects de definición (`ArrowDefinition`, `EffectDefinition`). **No depende de Gameplay ni de UI**. |
-| **`JuegoSinNombre.Gameplay`** | `JuegoSinNombre.Core`, `PurrNet`, `Unity.TextMeshPro` | **Capa de Dominio y Mecánicas**. Contiene la máquina de estados del juego (`GameManager`), lógica del arquero (`ArcherPlayer`, `BowController`, `AimController`, `PlayerShooter`), simulación de proyectiles (`ArrowProjectile`, `ArrowSpawner`), resolución de combate (`CombatResolver`, `DamageHitbox`, `HealthModule`), cámaras (`ArrowFollowCamera`, `MatchEndPresenter`) y red de salas (`NetworkRoomController`, `RoomNetworkService`). |
-| **`JuegoSinNombre.UI`** | `JuegoSinNombre.Core`, `JuegoSinNombre.Gameplay`, `Unity.TextMeshPro` | **Capa de Presentación y HUD**. Maneja los widgets gráficos: ruleta de selección de flechas (`ArrowSlotMachineUI`), pantalla de victoria/derrota (`MatchEndUI`), rosa de los vientos (`WindUi`) y barras de salud flotantes (`WorldHealthBar`). |
+| **`JuegoSinNombre.Gameplay`** | `JuegoSinNombre.Core`, `PurrNet`, `Unity.TextMeshPro` | **Capa de Dominio y Mecánicas**. Contiene la máquina de estados del juego (`GameManager`), lógica del arquero (`ArcherPlayer`, `BowController`, `AimController`, `PlayerShooter`, `RagdollController`), proyectiles y estelas (`ArrowProjectile`, `ArrowSpawner`), telemetría (`PerformanceTelemetryMonitor`), resolución de combate (`CombatResolver`, `DamageHitbox`, `HealthModule`), cámaras (`ArrowFollowCamera`, `MatchEndPresenter`) y red de salas (`NetworkRoomController`, `RoomNetworkService`). |
+| **`JuegoSinNombre.UI`** | `JuegoSinNombre.Core`, `JuegoSinNombre.Gameplay`, `Unity.TextMeshPro` | **Capa de Presentación y HUD**. Maneja los widgets gráficos: ruleta de selección de flechas (`ArrowSlotMachineUI`), pantalla de victoria/derrota (`MatchEndUI`), rosa de los vientos (`WindUi`), barras de salud flotantes (`WorldHealthBar`) y limpieza de instancias duplicadas (`EventSystemCleaner`). |
 | **`JuegoSinNombre.Editor`** | `JuegoSinNombre.Gameplay`, `PurrNet` | **Herramientas de Desarrollo**. Automatización de limpieza de conexiones de red y estados de PurrNet al detener o pausar el Play Mode (`PlayModeNetworkCleanup`). |
 
 ---
@@ -63,7 +65,7 @@ El código sigue estrictamente patrones de diseño orientados a la mantenibilida
 ### 3.1 Type Object / Flyweight (Data-Driven Design)
 - **Implementación**: [`ArrowDefinition.cs`](file:///D:/Unity2026/Assets/JuegoSinNombre/Scripts/Core/ArrowDefinition.cs) y [`EffectDefinition.cs`](file:///D:/Unity2026/Assets/JuegoSinNombre/Scripts/Core/EffectDefinition.cs).
 - **Problema que resuelve**: Evita la proliferación incontrolada de clases heredadas (`ArrowColosal`, `ArrowSkadi`, `ArrowVampirica`). 
-- **Solución**: Se define **una única entidad física** ([`ArrowProjectile.cs`](file:///D:/Unity2026/Assets/JuegoSinNombre/Scripts/Gameplay/ArrowProjectile.cs)) y el comportamiento varía según el contenedor inmutable de datos (`ScriptableObject`). Crear o balancear flechas consiste en crear assets en disco y alterar sus propiedades numéricas en el Inspector sin recompilación.
+- **Solución**: Se define **una única entidad física** ([`ArrowProjectile.cs`](file:///D:/Unity2026/Assets/JuegoSinNombre/Scripts/Gameplay/ArrowProjectile.cs)) y el comportamiento varía según el contenedor inmutable de datos (`ScriptableObject`). Crear o balancear flechas y configurar sus estelas consiste en crear o editar assets en disco sin recompilación.
 
 ### 3.2 Stateless Domain Services (Servicios de Dominio Estáticos)
 - **Implementación**: [`CombatResolver.cs`](file:///D:/Unity2026/Assets/JuegoSinNombre/Scripts/Gameplay/CombatResolver.cs) y [`ArrowSpawner.cs`](file:///D:/Unity2026/Assets/JuegoSinNombre/Scripts/Gameplay/ArrowSpawner.cs).
@@ -99,7 +101,8 @@ Toda la lógica decisiva reside en el **Servidor (Host)**. Los clientes son term
 3. El servidor valida que la micro-ronda esté en fase `Aiming` y registra el tiro en `_pendingShots`.
 4. Cuando ambos jugadores dispararon (o vence el tiempo de turno), el servidor instancia los proyectiles de flecha simultáneamente.
 5. El proyectil viaja físicamente en el servidor; los clientes interpolan la posición replicada.
-6. La colisión se detecta y resuelve en el servidor mediante `CombatResolver`.
+6. El proyectil emite un RPC de configuración de estela (`ConfigureTrailObserversRpc`) con `bufferLast: true` para sincronizar color, grosor y vida útil a todos los clientes.
+7. La colisión se detecta y resuelve en el servidor mediante `CombatResolver`. Al chocar, el proyectil apaga inmediatamente la emisión de la estela (`trail.emitting = false`) para evitar deformaciones con el ragdoll.
 
 ### 4.2 Sincronización de Estado con `SyncVar`
 
@@ -135,7 +138,7 @@ Tipos complejos y structs como `ArrowHitInfo`, `PendingShot` y `BodyPartType` se
     [ Aiming ] ────────> Arcos desbloqueados. Jugadores apuntan y seleccionan flecha.
          │               Cada uno dispara y queda bloqueado a la espera del rival.
          ▼
-   [ Resolving ] ──────> Disparo simultáneo ejecutado. Flechas vuelan en red.
+   [ Resolving ] ──────> Disparo simultáneo ejecutado. Flechas vuelan en red con sus estelas.
          │               Entra en acción ArrowFollowCamera. Input bloqueado.
          ▼
     [ Outcome ] ────────> Impactos resueltos. Daños y debufos aplicados.
@@ -158,13 +161,13 @@ Tipos complejos y structs como `ArrowHitInfo`, `PendingShot` y `BodyPartType` se
 6. **`Outcome`**: Se procesa el resultado del cruce de flechas, se limpian los efectos que duraban un único turno y se verifica la vida de ambos combatientes.
 7. **`StepForward`**: Mecánica de desempate por aproximación progresiva si ambos jugadores fallan consecutivamente.
 8. **`MatchPoint`**: Indicador de tensión dramática cuando un combatiente queda a un impacto de la derrota.
-9. **`GameOver`**: La partida concluye. Se acciona `MatchEndPresenter` y se despliega `MatchEndUI`.
+9. **`GameOver`**: La partida concluye. El servidor calcula al ganador, lo replica mediante `NotifyMatchOverObserversRpc` **antes** de cambiar a fase `GameOver` (previniendo condiciones de carrera con la UI), acciona `MatchEndPresenter` y despliega `MatchEndUI`.
 
 ---
 
 ## 6. Subsistemas Detallados del Gameplay
 
-### 6.1 Subsistema del Arquero (`ArcherPlayer`, `BowController`, `AimController`)
+### 6.1 Subsistema del Arquero (`ArcherPlayer`, `BowController`, `AimController`, `RagdollController`)
 
 ```
                           +------------------------+
@@ -213,13 +216,14 @@ Tipos complejos y structs como `ArrowHitInfo`, `PendingShot` y `BodyPartType` se
 #### E. `PlayerAimIK.cs`
 - Ajusta procedimentalmente la columna, pecho y brazos del rig humanoide para que el torso apunte exactamente hacia donde mira la cámara, garantizando coherencia visual en multijugador.
 
-#### F. `RagdollController.cs`
-- Controla el cambio dinámico entre el componente `Animator` y la jerarquía de `Rigidbody` y `CharacterJoint` en las extremidades.
-- Al morir, apaga el Animator, activa la física de todos los huesos y aplica el impulso vectorial de la flecha letal (`ApplyImpactForce`).
+#### F. `RagdollController.cs` (Gestión Cinemática Robusta)
+- Controla el cambio dinámico entre el componente `Animator` y la jerarquía de 12 `Rigidbody` y `CharacterJoint` en las extremidades.
+- **Protección de Cinemática PhysX (Unity 6)**: Para prevenir warnings del motor (*"Setting linear/angular velocity of a kinematic body is not supported"*), las velocidades residuales se cancelan en cero antes de alternar el flag `isKinematic = true`.
+- Al morir, desactiva el Animator, activa la física de todos los huesos y aplica el impulso vectorial de la flecha letal (`ApplyImpactForce`).
 
 ---
 
-### 6.2 Subsistema de Proyectiles y Balística (`ArrowProjectile`, `ArrowSpawner`)
+### 6.2 Subsistema de Proyectiles, Balística y Estelas (`ArrowProjectile`, `ArrowSpawner`)
 
 #### A. `ArrowProjectile.cs`
 - **Física Autoritativa**: Maneja su propio `Rigidbody`. Inicialmente permanece en modo cinemático hasta recibir la velocidad inicial en `Launch()`.
@@ -229,6 +233,10 @@ Tipos complejos y structs como `ArrowHitInfo`, `PendingShot` y `BodyPartType` se
   - Cuando `definition.homing == true`, el proyectil busca automáticamente el transform del torso del rival (`_homingTargetTorso`).
   - Mediante `Vector3.RotateTowards`, desvía el vector de velocidad en cada paso de física hacia el pecho del enemigo con una velocidad de giro calibrable (`homingTurnSpeed`).
   - *Regla de Balance*: Nunca puede ejecutar un impacto crítico a la cabeza; si la física detecta colisión con la cabeza, se degrada forzosamente a daño normal de torso (1.0x).
+- **Sistema de Estelas Dinámicas (`TrailRenderer`)**:
+  - Al dispararse, el servidor despacha un RPC a todos los clientes (`ConfigureTrailObserversRpc(startColor, endColor, startWidth, endWidth, time, runLocally: true, bufferLast: true)`).
+  - Configura dinámicamente un gradiente cromático de 2 paradas con desvanecimiento alfa a cero, una curva cónica decreciente (`AnimationCurve.EaseInOut(0f, startWidth, 1f, endWidth)`) y `alignment = LineAlignment.View`.
+  - En el método `OnHit()`, el proyectil apaga inmediatamente la emisión (`_trailRenderer.emitting = false`) para que la estela no sufra artefactos si el arquero impactado cae en ragdoll.
 - **Impacto y Anclaje**:
   - Al colisionar, desactiva la física (`isKinematic = true`), emite el evento `OnHit`, se emparenta jerárquicamente a la superficie o hueso impactado (`transform.SetParent(collision.transform)`) y transmite el struct `ArrowHitInfo` al `CombatResolver`.
 
@@ -296,7 +304,7 @@ Instancia pura en C# asociada a cada `ArcherPlayer`. En el servidor:
 
 ---
 
-### 6.6 Subsistema de UI y HUD
+### 6.6 Subsistema de UI, HUD y Utilidades del Motor
 
 #### A. `ArrowSlotMachineUI.cs` (Mano Táctica Estilo Tragamoneda)
 - **Ruleta Central**: Al repartirse una mano de 3 flechas, los 3 slots aparecen aumentados en el centro de la pantalla (`_centerScale = 1.2x`) y giran a alta velocidad alternando iconos y nombres.
@@ -309,14 +317,20 @@ Instancia pura en C# asociada a cada `ArcherPlayer`. En el servidor:
 
 #### B. `PlayerTurnStatusUI.cs`
 - Muestra mensajes dinámicos contextuales según la fase (`"TU TURNO DE DISPARAR"`, `"ESPERANDO AL OPONENTE..."`, `"FLECHAS EN VUELO"`).
+- **Anti Re-batching**: Compara el texto antes de asignarlo al TextMeshPro (`_statusText.text != _lastFormattedMessage`) para evitar que el canvas de UI se recompile en cada frame.
 
 #### C. `WindUi.cs`
 - Consume `IWindProvider` para orientar una flecha en brújula y desplegar la velocidad del viento en metros por segundo.
 
 #### D. `MatchEndUI.cs`
-- Cartel de "VICTORIA" o "DERROTA", panel de estadísticas de rondas ganadas en el Bo3/Bo5 y botón para reiniciar la partida o retornar a la sala.
+- Despliega cartel de "VICTORIA" o "DERROTA", panel de estadísticas de rondas ganadas en el Bo3/Bo5 y botón para reiniciar o volver a la sala.
+- Resuelve estados de red de forma determinista: si el RPC indica ganador explícito, sobreescribe cualquier estado de empate preliminar recibido durante la transición de red.
 
-#### E. `NetworkRoomController.cs` y `RoomNetworkService.cs`
+#### E. `EventSystemCleaner.cs`
+- Inicializado automáticamente vía `[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]`.
+- Detecta y destruye instancias duplicadas de `EventSystem` generadas al cargar aditivamente escenas de juego (`Test.unity` sobre `MainMenu.unity`), eliminando advertencias y asegurando el correcto registro de eventos de clic.
+
+#### F. `NetworkRoomController.cs` y `RoomNetworkService.cs`
 - Interfaz gráfica del Menú Principal (`MainMenu.unity`).
 - Generación de códigos de sala alfanuméricos de 5 caracteres (`RoomCode`).
 - Gestión de conexión Host / Cliente y transición sincronizada a la escena de combate (`Test.unity`).
@@ -327,15 +341,15 @@ Instancia pura en C# asociada a cada `ArcherPlayer`. En el servidor:
 
 ### 7.1 Flechas (`Assets/JuegoSinNombre/Data/`)
 
-| Asset | Nombre en Pantalla | Masa | Viento | Daño Base | Homing | Lifesteal | Rasgo / Efectos |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`ArrowDefault.asset`** | Flecha Común | 0.10 | 1.0x | 35 | No | 0% | Flecha de madera balanceada estándar. |
-| **`ArrowColosal.asset`** | Colosal | 0.40 | 0.0x | 65 | No | 0% | Muy pesada, daño destructivo, ignora el viento por completo. |
-| **`ArrowBuscadora.asset`**| Apolo | 0.08 | 0.5x | 30 | **Sí** (3.5 turn) | 0% | Guiado autoritativo al torso; prohibido el headshot. |
-| **`ArrowCongelante.asset`**| Skadi | 0.12 | 1.0x | 25 | No | 0% | Aplica `EffectCongelacion` (Ralentiza mira y tensado). |
-| **`ArrowVenenosa.asset`** | Jörmungandr | 0.10 | 1.0x | 20 | No | 0% | Aplica `EffectVeneno` (Daño continuo por segundo y debufo). |
-| **`ArrowVampirica.asset`**| Lamia | 0.11 | 1.0x | 30 | No | **35%** | Transfiere el 35% del daño infligido como curación al tirador. |
-| **`ArrowPenetrante.asset`**| Gae Bulg | 0.05 | 1.8x | 45 | No | 0% | Ultraliviana, altísima velocidad, muy desviada por el viento. |
+| Asset | Nombre | Masa | Viento | Daño | Homing | Lifesteal | Estela Visual (Trail) | Rasgo / Efectos |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- | :--- |
+| **`ArrowDefault.asset`** | Flecha Común | 0.10 | 1.0x | 35 | No | 0% | Blanco/Aire (`0.06m`, `0.25s`) | Flecha de madera balanceada estándar. |
+| **`ArrowColosal.asset`** | Colosal | 0.40 | 0.0x | 65 | No | 0% | Fuego Naranja (`0.13m`, `0.45s`) | Muy pesada, daño destructivo, ignora el viento. |
+| **`ArrowBuscadora.asset`**| Apolo | 0.08 | 0.5x | 30 | **Sí** | 0% | Rayo Dorado (`0.09m`, `0.40s`) | Guiado autoritativo al torso; prohibido el headshot. |
+| **`ArrowCongelante.asset`**| Skadi | 0.12 | 1.0x | 25 | No | 0% | Hielo Cian (`0.08m`, `0.35s`) | Aplica `EffectCongelacion` (Ralentiza mira y tensado). |
+| **`ArrowVenenosa.asset`** | Jörmungandr | 0.10 | 1.0x | 20 | No | 0% | Niebla Verde (`0.08m`, `0.35s`) | Aplica `EffectVeneno` (DoT continuo y vulnerabilidad). |
+| **`ArrowVampirica.asset`**| Lamia | 0.11 | 1.0x | 30 | No | **35%** | Sangre Carmesí (`0.09m`, `0.35s`)| Cura al tirador el 35% del daño infligido. |
+| **`ArrowPenetrante.asset`**| Gae Bulg | 0.05 | 1.8x | 45 | No | 0% | Plasma Violeta (`0.07m`, `0.30s`)| Ultraliviana, hiperveloz, sensible al viento. |
 
 ### 7.2 Efectos de Estado (`Assets/JuegoSinNombre/Data/`)
 
@@ -346,22 +360,49 @@ Instancia pura en C# asociada a cada `ArcherPlayer`. En el servidor:
 
 ---
 
-## 8. Guía de Extensión y Buenas Prácticas
+## 8. Telemetría y Optimización de Rendimiento
 
-### 8.1 Cómo Agregar una Nueva Flecha
+El proyecto cuenta con una infraestructura de telemetría automática de grado de producción implementada en [`PerformanceTelemetryMonitor.cs`](file:///D:/Unity2026/Assets/JuegoSinNombre/Scripts/Gameplay/PerformanceTelemetryMonitor.cs):
+
+### 8.1 Capacidades del Monitor de Telemetría
+- **Inicialización Automática**: Se auto-instancia al entrar a Play Mode (`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]`) con bandera `DontDestroyOnLoad`.
+- **Overlay en Pantalla**: Accionable con la tecla **`F3`**, despliega una caja de diagnóstico semitransparente con tipografía monoespaciada en la esquina superior izquierda.
+- **Heartbeat en Consola**: Emite un informe consolidado cada 5 segundos a la consola de Unity.
+- **Métricas Supervisadas**:
+  - Tasa de refresco instantánea y promedio (**FPS**).
+  - Tiempo de cuadro en milisegundos (**Frametime ms**).
+  - Memoria administrada activa (**Mono Heap Size** en MB).
+  - Asignaciones netas por ciclo de telemetría (**ΔMem** en KB).
+  - Recolecciones de basura disparadas (**GC Count Gen 0/1/2**).
+  - Estado de red (**Host / Client / Desconectado**) y conteo de jugadores activos.
+  - Fase activa de la máquina de estados (`RoundPhase`).
+
+### 8.2 Métricas de Rendimiento en Ejecución Real (Live Profiling)
+Registros tomados durante combate multijugador simultáneo en fase de vuelo de flechas (`Resolving`):
+
+| Instancia | Rol de Red | FPS Medido | Frametime | Heap Memory | Delta Asignado |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **Instancia 1** | **HOST (2 jugadores)** | **270.3 FPS** | **3.7 ms** | 71.0 MB | +540 KB |
+| **Instancia 2** | **CLIENT (2 jugadores)** | **245.0 FPS** | **4.1 ms** | 39.0 MB | +3.2 MB |
+
+---
+
+## 9. Guía de Extensión y Buenas Prácticas
+
+### 9.1 Cómo Agregar una Nueva Flecha
 1. Ir a la carpeta `Assets/JuegoSinNombre/Data/`.
 2. Click derecho -> **`Create` > `Arqueria` > `Arrow`**.
 3. Asignar el prefab base `ArrowDefault.prefab` (o duplicarlo si requiere una malla 3D o VFX único).
-4. Ajustar sliders de física y daño en el Inspector.
+4. Ajustar sliders de física, daño y configurar la sección de **Trail** (colores de inicio/fin, ancho y duración).
 5. Abrir el prefab `Player.prefab` (`Assets/JuegoSinNombre/Prefabs/Player.prefab`), localizar `PlayerShooter` y agregar el nuevo asset al array `Arsenal Pool`.
 
-### 8.2 Cómo Agregar un Nuevo Efecto de Estado
+### 9.2 Cómo Agregar un Nuevo Efecto de Estado
 1. Click derecho en `Assets/JuegoSinNombre/Data/` -> **`Create` > `Arqueria` > `Effect`**.
 2. Calibrar los modificadores deseados (inversión de ejes, sensibilidad, blur, zoom de FOV, daño continuo).
 3. Asignar este efecto en la ranura `Effects On Target` de cualquier `ArrowDefinition`.
 
-### 8.3 Convenciones de Código y Mantenimiento
+### 9.3 Convenciones de Código y Mantenimiento
 - **Nada de lógica de combate en el Cliente**: Cualquier cálculo que afecte vida, estados o trayectorias de flechas debe residir dentro de `if (isServer)` o dentro de los servicios estáticos autoritativos.
 - **Memoria Zero-Alloc**: Estructuras de datos que viajen en eventos frecuentes deben ser `struct` (`ArrowHitInfo`, `PendingShot`) para evitar la fragmentación de memoria del garbage collector.
+- **UI Anti-Dirtying**: Validar el contenido de los textos antes de reasignar (`_statusText.text != newText`) para evitar invalidar la geometría de los Canvas en cada frame.
 - **Respeto a los Ensamblados**: Nunca referenciar clases de `JuegoSinNombre.UI` desde `JuegoSinNombre.Core` o `JuegoSinNombre.Gameplay`.
-
