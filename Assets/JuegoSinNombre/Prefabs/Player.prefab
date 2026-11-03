@@ -598,8 +598,8 @@ MonoBehaviour:
   bodyPivot: {fileID: 3024399195877579062}
   playerCamera: {fileID: 1130339829164792812}
   animator: {fileID: 7598138881913556359}
-  swayFrequency: 0.6
-  swayAmplitude: 1.5
+  swayFrequency: 0.4
+  swayAmplitude: 0.8
   swayByTension:
     serializedVersion: 2
     m_Curve:
