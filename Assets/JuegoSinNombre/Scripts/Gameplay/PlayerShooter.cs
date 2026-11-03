@@ -117,7 +117,7 @@ namespace JuegoSinNombre.Gameplay
             SyncHandObserversRpc(newIndices[0], newIndices[1], newIndices[2]);
         }
 
-        [ObserversRpc(runLocally: true)]
+        [ObserversRpc(runLocally: true, bufferLast: true)]
         private void SyncHandObserversRpc(int idx0, int idx1, int idx2)
         {
             _handIndices[0] = idx0;
