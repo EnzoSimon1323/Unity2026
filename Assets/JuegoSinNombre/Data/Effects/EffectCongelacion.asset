@@ -15,7 +15,7 @@ MonoBehaviour:
   displayName: Escarcha de Skadi
   hudDescription: 'Congelado: Mira ralentizada y tiempo de tensado duplicado.'
   expiresOnPhase: 5
-  phaseCount: 1
+  phaseCount: 2
   invertAxes: 0
   sensitivityMultiplier: 0.4
   drawTimeMultiplier: 2

@@ -156,7 +156,10 @@ namespace JuegoSinNombre.Gameplay
             else if (hasShot)
             {
                 // El jugador ya confirmó su tiro pero espera que el rival dispare:
-                // Queda apuntando fijado y bloqueado sin poder mover la mira ni la cámara.
+                // Queda apuntando fijado y bloqueado (primera persona) sin poder mover la
+                // mira ni la cámara. Vuelve a tercera persona recién cuando hasShot se
+                // resetea (ambos jugadores dispararon y la siguiente micro-ronda arranca,
+                // via ResetRoundShotRpc). Esto es intencional, no un bug.
                 SetAiming(true);
             }
             else
