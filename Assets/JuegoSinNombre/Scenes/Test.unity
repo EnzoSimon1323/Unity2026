@@ -13058,8 +13058,24 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8447246553908443532, guid: 7079748d4309bb24db39c22e768d3c14, type: 3}
+      propertyPath: _hudScale
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8447246553908443532, guid: 7079748d4309bb24db39c22e768d3c14, type: 3}
+      propertyPath: _centerScale
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8447246553908443532, guid: 7079748d4309bb24db39c22e768d3c14, type: 3}
       propertyPath: _slots.Array.size
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8447246553908443532, guid: 7079748d4309bb24db39c22e768d3c14, type: 3}
+      propertyPath: _bottomRightOffset.x
+      value: -60
+      objectReference: {fileID: 0}
+    - target: {fileID: 8447246553908443532, guid: 7079748d4309bb24db39c22e768d3c14, type: 3}
+      propertyPath: _bottomRightOffset.y
+      value: 35
       objectReference: {fileID: 0}
     - target: {fileID: 8447246553908443532, guid: 7079748d4309bb24db39c22e768d3c14, type: 3}
       propertyPath: _slots.Array.data[0].keyBadge

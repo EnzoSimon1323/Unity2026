@@ -31,6 +31,7 @@ namespace JuegoSinNombre.Gameplay
         public float Fov { get; private set; }
         public bool CrosshairVisible { get; private set; } = true;
         public bool CanShoot { get; private set; }
+        public float IncomingDamageMultiplier { get; private set; } = 1f;
 
         /// <summary>Lista estática de todos los arqueros vivos en la partida.</summary>
         public static readonly System.Collections.Generic.List<ArcherPlayer> AllPlayers = new();
@@ -126,7 +127,7 @@ namespace JuegoSinNombre.Gameplay
         {
             if (!isServer) return;
             var mods = _effectRunner.CalculateModifiers();
-            SyncModifiersObserversRpc(mods.sensMult, mods.drawMult, mods.blur, mods.fovMult, mods.axesInv, mods.hideCross);
+            SyncModifiersObserversRpc(mods.sensMult, mods.drawMult, mods.blur, mods.fovMult, mods.axesInv, mods.hideCross, mods.dmgTakenMult);
         }
 
         private void HandlePhaseChangedOnServer(RoundPhase newPhase)
@@ -141,8 +142,20 @@ namespace JuegoSinNombre.Gameplay
             _effectRunner?.ClearAll();
         }
 
+        /// <summary>
+        /// Retorna el multiplicador de daño entrante. En el servidor lo evalúa autoritativamente desde EffectRunner.
+        /// </summary>
+        public float GetIncomingDamageMultiplier()
+        {
+            if (isServer && _effectRunner != null)
+            {
+                return _effectRunner.CalculateIncomingDamageMultiplier();
+            }
+            return IncomingDamageMultiplier;
+        }
+
         [ObserversRpc(runLocally: true)]
-        private void SyncModifiersObserversRpc(float sensMult, float drawMult, float blur, float fovMult, bool axesInv, bool hideCross)
+        private void SyncModifiersObserversRpc(float sensMult, float drawMult, float blur, float fovMult, bool axesInv, bool hideCross, float dmgTakenMult)
         {
             Sensitivity = baseSensitivity * sensMult;
             DrawTimeMultiplier = Mathf.Max(0.01f, drawMult);
@@ -151,6 +164,7 @@ namespace JuegoSinNombre.Gameplay
             if (playerCamera != null) playerCamera.fieldOfView = Fov;
             AxesInverted = axesInv;
             CrosshairVisible = !hideCross;
+            IncomingDamageMultiplier = Mathf.Max(0.1f, dmgTakenMult);
             Notify();
         }
 
@@ -163,6 +177,7 @@ namespace JuegoSinNombre.Gameplay
             BlurAmount = 0f;
             Fov = baseFov;
             CrosshairVisible = true;
+            IncomingDamageMultiplier = 1f;
             Notify();
         }
 

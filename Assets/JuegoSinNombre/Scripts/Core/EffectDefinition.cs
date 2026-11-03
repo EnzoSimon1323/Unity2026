@@ -50,6 +50,10 @@ namespace JuegoSinNombre.Core
         [Tooltip("Vida por segundo que drena. Jormungandr. Negativo para curar.")]
         public float damagePerSecond;
 
+        [Header("Modificadores de combate")]
+        [Tooltip("Multiplicador del daño recibido mientras este efecto esté activo. Ej: 1.35 = recibe +35% de daño de otras flechas.")]
+        public float incomingDamageMultiplier = 1f;
+
         /// <summary>
         /// Para el EffectRunner: dos efectos con el mismo stackId no se acumulan,
         /// el nuevo reemplaza al viejo. Evita que dos Lokis seguidos se cancelen entre si.

@@ -95,7 +95,7 @@ namespace JuegoSinNombre.Gameplay
             }
         }
 
-        public (float sensMult, float drawMult, float blur, float fovMult, bool axesInv, bool hideCross) CalculateModifiers()
+        public (float sensMult, float drawMult, float blur, float fovMult, bool axesInv, bool hideCross, float dmgTakenMult) CalculateModifiers()
         {
             float sensMult = 1f;
             float drawMult = 1f;
@@ -103,6 +103,7 @@ namespace JuegoSinNombre.Gameplay
             float fovMult = 1f;
             bool axesInv = false;
             bool hideCross = false;
+            float dmgTakenMult = 1f;
 
             for (int i = 0; i < _activeEffects.Count; i++)
             {
@@ -115,9 +116,24 @@ namespace JuegoSinNombre.Gameplay
                 fovMult *= def.fovMultiplier;
                 if (def.invertAxes) axesInv = true;
                 if (def.hideCrosshair) hideCross = true;
+                if (def.incomingDamageMultiplier > 0f) dmgTakenMult *= def.incomingDamageMultiplier;
             }
 
-            return (sensMult, drawMult, blur, fovMult, axesInv, hideCross);
+            return (sensMult, drawMult, blur, fovMult, axesInv, hideCross, dmgTakenMult);
+        }
+
+        public float CalculateIncomingDamageMultiplier()
+        {
+            float mult = 1f;
+            for (int i = 0; i < _activeEffects.Count; i++)
+            {
+                var def = _activeEffects[i].Definition;
+                if (def != null && def.incomingDamageMultiplier > 0f)
+                {
+                    mult *= def.incomingDamageMultiplier;
+                }
+            }
+            return mult;
         }
     }
 }

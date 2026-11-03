@@ -596,6 +596,7 @@ namespace JuegoSinNombre.UI
                 var eff = def.effectsOnTarget[0];
                 if (eff != null)
                 {
+                    if (eff.incomingDamageMultiplier > 1f) return $"DEBILITA +{(int)((eff.incomingDamageMultiplier - 1f) * 100)}%";
                     if (eff.damagePerSecond > 0f) return "VENENO DoT";
                     if (eff.sensitivityMultiplier < 1f) return "CONGELANTE";
                 }

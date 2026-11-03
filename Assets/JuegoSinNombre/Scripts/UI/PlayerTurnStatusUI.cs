@@ -228,6 +228,13 @@ namespace JuegoSinNombre.UI
                     color = Color.white;
                     break;
             }
+
+            if (_archer != null && _archer.IncomingDamageMultiplier > 1.01f)
+            {
+                int bonusPercent = Mathf.RoundToInt((_archer.IncomingDamageMultiplier - 1f) * 100f);
+                raw += $" [DEBILITADO +{bonusPercent}%]";
+                formatted += $"\n<color=#FF4444><b>⚠ [DEBILITADO: +{bonusPercent}% DAÑO RECIBIDO]</b></color>";
+            }
         }
 
         private void OnGUI()

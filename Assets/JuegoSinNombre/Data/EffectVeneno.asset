@@ -14,13 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EffectDefinition
   displayName: Veneno de Jormungandr
   icon: {fileID: 0}
-  hudDescription: 'Envenenado: Pierdes vida constantemente mientras apuntas.'
-  expiresOnPhase: 4
-  phaseCount: 1
+  hudDescription: 'Debilitado: Recibes +35% de dano durante 3 rondas.'
+  expiresOnPhase: 5
+  phaseCount: 3
   invertAxes: 0
   sensitivityMultiplier: 1
   drawTimeMultiplier: 1
   blurAmount: 0
   fovMultiplier: 1
   hideCrosshair: 0
-  damagePerSecond: 4
+  damagePerSecond: 0
+  incomingDamageMultiplier: 1.35

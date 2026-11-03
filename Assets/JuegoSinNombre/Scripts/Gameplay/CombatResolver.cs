@@ -25,7 +25,21 @@ namespace JuegoSinNombre.Gameplay
         {
             if (victim == null || hit.damage <= 0f) return;
 
-            victim.ApplyDamage(hit.damage);
+            float damageToApply = hit.damage;
+
+            // Debilitación: si la víctima ya sufre un efecto de vulnerabilidad (ej. Flecha Venenosa previa)
+            ArcherPlayer victimPlayer = victim.GetComponent<ArcherPlayer>();
+            if (victimPlayer != null)
+            {
+                float debuffMult = victimPlayer.GetIncomingDamageMultiplier();
+                if (debuffMult > 1f)
+                {
+                    damageToApply *= debuffMult;
+                    Debug.Log($"<color=orange><b>[CombatResolver] Daño amplificado por Debilitación:</b> Base={hit.damage:F1} * {debuffMult:F2} = {damageToApply:F1} a la víctima {hit.victim}</color>");
+                }
+            }
+
+            victim.ApplyDamage(damageToApply);
 
             // Lamia Lifesteal: Curación autoritativa al tirador
             if (hit.definition != null && hit.definition.lifestealRatio > 0f && hit.shooter.HasValue)
@@ -36,7 +50,7 @@ namespace JuegoSinNombre.Gameplay
                     HealthModule shooterHealth = shooterPlayer.GetComponent<HealthModule>();
                     if (shooterHealth != null)
                     {
-                        float healAmount = hit.damage * hit.definition.lifestealRatio;
+                        float healAmount = damageToApply * hit.definition.lifestealRatio;
                         shooterHealth.ApplyHeal(healAmount);
                         Debug.Log($"<color=green><b>[CombatResolver] Lamia Lifesteal:</b> Curó {healAmount:F1} de vida al tirador {hit.shooter.Value}.</color>");
                     }
@@ -47,7 +61,6 @@ namespace JuegoSinNombre.Gameplay
             // Regla GDD: Solo se aplican si impactan al rival (no a sí mismo, no al piso).
             if (hit.effects != null && hit.effects.Length > 0 && !hit.IsSelfHit)
             {
-                ArcherPlayer victimPlayer = victim.GetComponent<ArcherPlayer>();
                 if (victimPlayer != null)
                 {
                     foreach (var effect in hit.effects)
@@ -66,7 +79,7 @@ namespace JuegoSinNombre.Gameplay
                 ragdoll.ApplyImpactForce(hitDirection.normalized * impulseForce, hit.hitPoint);
             }
 
-            Debug.Log($"<color=red><b>[CombatResolver] Impacto resuelto:</b> Parte={hit.bodyPart} | Mult=x{hit.damageMultiplier} | Daño={hit.damage:F1} | Víctima={hit.victim}</color>");
+            Debug.Log($"<color=red><b>[CombatResolver] Impacto resuelto:</b> Parte={hit.bodyPart} | Mult=x{hit.damageMultiplier} | Daño={damageToApply:F1} | Víctima={hit.victim}</color>");
 
             OnHitResolved?.Invoke(hit, victim);
         }
