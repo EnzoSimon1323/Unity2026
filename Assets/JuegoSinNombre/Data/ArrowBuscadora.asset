@@ -27,3 +27,9 @@ MonoBehaviour:
   splashRadius: 0
   effectsOnTarget: []
   effectsOnShooter: []
+  enableTrail: 1
+  trailColor: {r: 0.509434, g: 0.040850844, b: 0.5070962, a: 0.95}
+  trailEndColor: {r: 0.52886343, g: 0.0141509175, b: 1, a: 0}
+  trailWidth: 0.06
+  trailTime: 0.4
+  trailMaterial: {fileID: 0}

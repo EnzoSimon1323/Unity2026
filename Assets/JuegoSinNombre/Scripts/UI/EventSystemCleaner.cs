@@ -24,7 +24,7 @@ namespace JuegoSinNombre.UI
 
         public static void Deduplicate()
         {
-            var systems = Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var systems = Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude);
             if (systems != null && systems.Length > 1)
             {
                 // Conservar el primero y destruir los duplicados adicionales

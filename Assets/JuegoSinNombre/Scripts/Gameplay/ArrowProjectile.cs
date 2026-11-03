@@ -18,6 +18,8 @@ namespace JuegoSinNombre.Gameplay
         private PlayerID? _shooter;
         private bool _flying;
         private Transform _homingTargetTorso;
+        [SerializeField] private TrailRenderer _trailRenderer;
+        private static Material _sharedTrailMaterial;
 
         private readonly SyncVar<Vector3> _velocity = new(Vector3.zero);
         private readonly SyncVar<float> _mass = new(0.1f);
@@ -70,6 +72,7 @@ namespace JuegoSinNombre.Gameplay
         {
             _velocity.onChanged -= ApplyVelocity;
             _mass.onChanged -= HandleMassChanged;
+            if (_trailRenderer != null) _trailRenderer.emitting = false;
             OnStopped?.Invoke();
         }
 
@@ -109,6 +112,72 @@ namespace JuegoSinNombre.Gameplay
             _flying = true;
         }
 
+        private TrailRenderer EnsureTrailRenderer()
+        {
+            if (_trailRenderer != null) return _trailRenderer;
+
+            _trailRenderer = GetComponentInChildren<TrailRenderer>();
+            if (_trailRenderer == null)
+            {
+                var trailGo = new GameObject("ArrowTrail");
+                trailGo.transform.SetParent(transform, false);
+                trailGo.transform.localPosition = new Vector3(0f, 0f, -0.1f);
+                _trailRenderer = trailGo.AddComponent<TrailRenderer>();
+            }
+
+            if (_trailRenderer.sharedMaterial == null)
+            {
+                if (_sharedTrailMaterial == null)
+                {
+                    Shader s = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                    if (s == null) s = Shader.Find("Sprites/Default");
+                    if (s == null) s = Shader.Find("Universal Render Pipeline/Unlit");
+                    if (s != null)
+                    {
+                        _sharedTrailMaterial = new Material(s);
+                    }
+                }
+                _trailRenderer.sharedMaterial = _sharedTrailMaterial;
+            }
+
+            return _trailRenderer;
+        }
+
+        [ObserversRpc(runLocally: true, bufferLast: true)]
+        private void ConfigureTrailObserversRpc(bool enabled, Color startColor, Color endColor, float width, float time)
+        {
+            var trail = EnsureTrailRenderer();
+            if (trail == null) return;
+
+            if (!enabled)
+            {
+                trail.enabled = false;
+                trail.emitting = false;
+                return;
+            }
+
+            trail.enabled = true;
+            trail.time = time;
+            trail.alignment = LineAlignment.View;
+            trail.numCornerVertices = 2;
+            trail.numCapVertices = 2;
+
+            var widthCurve = new AnimationCurve();
+            widthCurve.AddKey(0f, width);
+            widthCurve.AddKey(1f, 0f);
+            trail.widthCurve = widthCurve;
+
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new GradientColorKey[] { new(startColor, 0f), new(endColor, 1f) },
+                new GradientAlphaKey[] { new(startColor.a, 0f), new(endColor.a, 1f) }
+            );
+            trail.colorGradient = gradient;
+
+            trail.Clear();
+            trail.emitting = true;
+        }
+
         /// <summary>Lo llama PlayerShooter.ShootServerRpc, siempre en el servidor.</summary>
         public void Launch(ArrowDefinition definition, Vector3 direction, float speed, PlayerID? shooter)
         {
@@ -124,6 +193,20 @@ namespace JuegoSinNombre.Gameplay
             if (_rb != null)
             {
                 _rb.mass = definition.mass;
+            }
+
+            if (definition != null && definition.enableTrail)
+            {
+                ConfigureTrailObserversRpc(
+                    true, 
+                    definition.trailColor, 
+                    definition.trailEndColor, 
+                    definition.trailWidth, 
+                    definition.trailTime);
+            }
+            else
+            {
+                ConfigureTrailObserversRpc(false, Color.clear, Color.clear, 0f, 0f);
             }
 
             Vector3 initialVel = direction * speed;
@@ -198,12 +281,14 @@ namespace JuegoSinNombre.Gameplay
                     Destroy(gameObject);
                 }
                 _flying = false;
+                if (_trailRenderer != null) _trailRenderer.emitting = false;
                 OnHit?.Invoke(collision.GetContact(0).point);
                 OnStopped?.Invoke();
                 return;
             }
 
             _flying = false;
+            if (_trailRenderer != null) _trailRenderer.emitting = false;
             Vector3 contactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
             Vector3 flightDirection = _rb != null && _rb.linearVelocity.sqrMagnitude > 0.01f ? _rb.linearVelocity.normalized : transform.forward;
             float arrowSpeed = _rb != null ? _rb.linearVelocity.magnitude : 0f;

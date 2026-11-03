@@ -104,7 +104,7 @@ namespace JuegoSinNombre.Gameplay
         private void DeactivateSceneCameras()
         {
             // Apagar cualquier cámara estática residual de la escena que no pertenezca a un jugador
-            var cameras = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var cameras = FindObjectsByType<Camera>(FindObjectsInactive.Include);
             foreach (var cam in cameras)
             {
                 if (cam != _playerCamera && cam.GetComponentInParent<PlayerIdentity>() == null)

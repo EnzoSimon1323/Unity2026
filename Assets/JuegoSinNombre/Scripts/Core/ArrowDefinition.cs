@@ -53,5 +53,24 @@ namespace JuegoSinNombre.Core
 
         [Tooltip("Que se le aplica al que dispara. Para flechas con contra, si llegan a balancearlo asi.")]
         public EffectDefinition[] effectsOnShooter;
+
+        [Header("Estela Visual (Trail)")]
+        [Tooltip("Habilita la estela visual detrás de la flecha en vuelo.")]
+        public bool enableTrail = true;
+
+        [Tooltip("Color inicial en el nacimiento de la estela.")]
+        public Color trailColor = new Color(1f, 1f, 1f, 0.85f);
+
+        [Tooltip("Color de desvanecimiento al final de la estela.")]
+        public Color trailEndColor = new Color(1f, 1f, 1f, 0f);
+
+        [Tooltip("Ancho de la estela al salir de la flecha.")]
+        [Range(0.01f, 0.4f)] public float trailWidth = 0.08f;
+
+        [Tooltip("Duración de la estela en el aire en segundos.")]
+        [Range(0.05f, 1.5f)] public float trailTime = 0.35f;
+
+        [Tooltip("Material opcional para la estela (si no se asigna, usa el shader unlit de partículas URP).")]
+        public Material trailMaterial;
     }
 }
