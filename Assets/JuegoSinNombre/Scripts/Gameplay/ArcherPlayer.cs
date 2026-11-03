@@ -138,6 +138,11 @@ namespace JuegoSinNombre.Gameplay
 
         private void HandleDeathOnServer()
         {
+            ClearAllEffects();
+        }
+
+        public void ClearAllEffects()
+        {
             if (!isServer) return;
             _effectRunner?.ClearAll();
         }

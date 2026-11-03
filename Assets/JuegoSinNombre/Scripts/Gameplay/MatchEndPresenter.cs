@@ -74,6 +74,20 @@ namespace JuegoSinNombre.Gameplay
                 Destroy(gameObject);
                 return;
             }
+
+            // Desactivar la cámara cinemática de podio al inicio
+            if (_endgameCamera != null)
+            {
+                _endgameCamera.gameObject.SetActive(false);
+            }
+        }
+
+        private void Start()
+        {
+            if (_endgameCamera != null)
+            {
+                _endgameCamera.gameObject.SetActive(false);
+            }
         }
 
         private void OnEnable()

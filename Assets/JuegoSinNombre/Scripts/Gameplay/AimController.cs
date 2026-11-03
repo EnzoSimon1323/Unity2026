@@ -119,6 +119,19 @@ namespace JuegoSinNombre.Gameplay
             OnAimingChanged?.Invoke(aiming);
         }
 
+        public void ResetAim()
+        {
+            if (isOwner)
+            {
+                SetAiming(false);
+            }
+            else
+            {
+                IsAiming = false;
+            }
+            if (animator != null) animator.SetBool(isAimingParam, false);
+        }
+
         private void Update()
         {
             if (!isOwner) return;

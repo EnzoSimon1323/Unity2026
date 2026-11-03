@@ -14,8 +14,16 @@ namespace JuegoSinNombre.Gameplay
         [Header("State")]
         [SerializeField] private bool _isRagdollActive;
 
+        private struct BoneTransform
+        {
+            public Transform transform;
+            public Vector3 localPosition;
+            public Quaternion localRotation;
+        }
+
         private Rigidbody[] _ragdollRigidbodies;
         private Collider[] _ragdollColliders;
+        private readonly List<BoneTransform> _initialBoneTransforms = new();
 
         public bool IsRagdollActive => _isRagdollActive;
 
@@ -103,6 +111,23 @@ namespace JuegoSinNombre.Gameplay
 
             _ragdollRigidbodies = ragdollRbList.ToArray();
             _ragdollColliders = ragdollColList.ToArray();
+
+            // Guardar la pose inicial de todos los huesos para poder reconstruir el personaje al reiniciar la ronda
+            _initialBoneTransforms.Clear();
+            Transform[] allBones = GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < allBones.Length; i++)
+            {
+                Transform t = allBones[i];
+                if (t != transform)
+                {
+                    _initialBoneTransforms.Add(new BoneTransform
+                    {
+                        transform = t,
+                        localPosition = t.localPosition,
+                        localRotation = t.localRotation
+                    });
+                }
+            }
         }
 
         public void SetRagdollState(bool active)
@@ -154,6 +179,37 @@ namespace JuegoSinNombre.Gameplay
         public void ResetRagdoll()
         {
             SetRagdollState(false);
+
+            if (_ragdollRigidbodies != null)
+            {
+                for (int i = 0; i < _ragdollRigidbodies.Length; i++)
+                {
+                    if (_ragdollRigidbodies[i] != null)
+                    {
+                        _ragdollRigidbodies[i].linearVelocity = Vector3.zero;
+                        _ragdollRigidbodies[i].angularVelocity = Vector3.zero;
+                    }
+                }
+            }
+
+            // Restaurar la pose original de cada hueso
+            for (int i = 0; i < _initialBoneTransforms.Count; i++)
+            {
+                var bone = _initialBoneTransforms[i];
+                if (bone.transform != null)
+                {
+                    bone.transform.localPosition = bone.localPosition;
+                    bone.transform.localRotation = bone.localRotation;
+                }
+            }
+
+            // Forzar al Animator a re-evaluar la pose desde cero
+            if (_animator != null)
+            {
+                _animator.enabled = true;
+                _animator.Rebind();
+                _animator.Update(0f);
+            }
         }
 
         /// <summary>

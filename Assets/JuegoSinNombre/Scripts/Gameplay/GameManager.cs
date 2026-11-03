@@ -468,22 +468,13 @@ namespace JuegoSinNombre.Gameplay
                     kvp.Value.HealthModule.ResetHealthServerRpc();
                 }
 
-                // Resetear ragdoll si estaba activo
-                if (kvp.Value.RagdollController != null)
-                {
-                    kvp.Value.RagdollController.ResetRagdoll();
-                }
+                // Resetear ragdoll, pose y posición en todos los clientes
+                kvp.Value.ResetPlayerRoundStateObserversRpc(kvp.Value.InitialSpawnPosition, kvp.Value.InitialSpawnRotation);
 
-                // Resetear modificadores del arquero
+                // Limpiar efectos de estado en el servidor
                 if (kvp.Value.TryGetComponent(out ArcherPlayer archer))
                 {
-                    archer.ResetModifiers();
-                    archer.SetCanShoot(false);
-                }
-
-                if (kvp.Value.TryGetComponent(out PlayerShooter shooter))
-                {
-                    shooter.ResetRoundShotRpc();
+                    archer.ClearAllEffects();
                 }
             }
         }
