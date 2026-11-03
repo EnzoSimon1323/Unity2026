@@ -824,6 +824,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4132688987784310869}
     - target: {fileID: 432495882596295274, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 432495882596295274, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
       objectReference: {fileID: 1832420765098688935}
@@ -831,6 +835,10 @@ PrefabInstance:
       propertyPath: _healthModule
       value: 
       objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 578850319509167690, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
     - target: {fileID: 578850319509167690, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
@@ -860,6 +868,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4132688987784310869}
     - target: {fileID: 3552394333516785364, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 3552394333516785364, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
       objectReference: {fileID: 1832420765098688935}
@@ -867,6 +879,10 @@ PrefabInstance:
       propertyPath: _healthModule
       value: 
       objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 3588082571947503074, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
     - target: {fileID: 3588082571947503074, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
@@ -916,6 +932,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4132688987784310869}
     - target: {fileID: 5795006999103116198, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 5795006999103116198, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
       objectReference: {fileID: 1832420765098688935}
@@ -923,6 +943,10 @@ PrefabInstance:
       propertyPath: _healthModule
       value: 
       objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 6026743018700495156, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
     - target: {fileID: 6026743018700495156, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
@@ -931,6 +955,10 @@ PrefabInstance:
       propertyPath: _healthModule
       value: 
       objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 6092863152443922895, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
     - target: {fileID: 6092863152443922895, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
@@ -951,6 +979,10 @@ PrefabInstance:
       propertyPath: _healthModule
       value: 
       objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 6831708315356249450, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
     - target: {fileID: 6831708315356249450, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
@@ -1011,6 +1043,10 @@ PrefabInstance:
       propertyPath: _healthModule
       value: 
       objectReference: {fileID: 4132688987784310869}
+    - target: {fileID: 9086720356229533890, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
+      propertyPath: _damageMultiplier
+      value: 0.75
+      objectReference: {fileID: 0}
     - target: {fileID: 9086720356229533890, guid: a3c9e58969eca134891813daa6ab4a22, type: 3}
       propertyPath: _ragdollController
       value: 
