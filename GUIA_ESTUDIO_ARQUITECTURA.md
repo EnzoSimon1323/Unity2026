@@ -1,6 +1,6 @@
 # 🏹 Guía de Estudio de Arquitectura y Código — JuegoSinNombre (Arqueros Multijugador)
 
-Esta guía documenta en profundidad la arquitectura, patrones de diseño, estructura de módulos y el procedimiento paso a paso para extender el arsenal con nuevas flechas y efectos en el proyecto.
+Esta guía documenta en profundidad la arquitectura, patrones de diseño, estructura de módulos, auditoría de rendimiento y el procedimiento paso a paso para extender el arsenal con nuevas flechas, estelas (*trails*) y efectos en el proyecto.
 
 ---
 
@@ -11,12 +11,13 @@ El proyecto está diseñado bajo principios de **Clean Architecture**, **Program
 ```
 +-------------------------------------------------------------+
 |                     JuegoSinNombre.UI                       |
-|   (ArrowSlotMachineUI, MatchEndUI, PlayerTurnStatusUI)       |
+|   (ArrowSlotMachineUI, MatchEndUI, EventSystemCleaner)      |
 +------------------------------+------------------------------+
                                | consume eventos / interfaces
 +------------------------------v------------------------------+
 |                  JuegoSinNombre.Gameplay                    |
-| (GameManager, ArcherPlayer, ArrowProjectile, CombatResolver)|
+| (GameManager, ArcherPlayer, ArrowProjectile, CombatResolver,|
+|  PerformanceTelemetryMonitor, MatchEndPresenter)            |
 +------------------------------+------------------------------+
                                | depende de
 +------------------------------v------------------------------+
@@ -28,13 +29,13 @@ El proyecto está diseñado bajo principios de **Clean Architecture**, **Program
 ### Principios Fundamentales del Proyecto
 1. **Arquitectura por Capas con Assembly Definitions (`.asmdef`)**:
    - `JuegoSinNombre.Core`: Contratos (`IEffectTarget`, `IWindProvider`), definiciones de datos (`ArrowDefinition`, `EffectDefinition`), enums (`RoundPhase`, `BodyPartType`) y estructuras puras de datos (`ArrowHitInfo`, `PendingShot`). **No tiene dependencias de Gameplay ni de UI**, garantizando máxima independencia.
-   - `JuegoSinNombre.Gameplay`: Mecánicas de disparo, física balística, gestión de salud, ragdoll, FSM del ciclo de partida y resolución de combate.
-   - `JuegoSinNombre.UI`: Capa presentacional y widgets de interfaz (ruleta de selección estilo tragamonedas, barra de salud, feedback de viento).
+   - `JuegoSinNombre.Gameplay`: Mecánicas de disparo, física balística, gestión de salud, ragdoll, FSM del ciclo de partida, estelas sincronizadas, telemetría y resolución de combate.
+   - `JuegoSinNombre.UI`: Capa presentacional y widgets de interfaz (ruleta de selección estilo tragamonedas, barra de salud, feedback de viento, limpieza de EventSystems duplicados).
    - `JuegoSinNombre.Editor`: Utilidades para limpieza de estado de red al entrar/salir de Play Mode.
 
 2. **Simulación Autoritativa en el Servidor (Server-Authoritative)**:
    - Toda lógica crítica (cálculo de daño, dispersión de viento, aplicación de efectos de estado, transiciones de turno y resolución de impactos) se ejecuta **exclusivamente en el servidor**.
-   - Los clientes envían intenciones (`PendingShot` vía RPCs) y reciben replicación mediante `SyncVar` y eventos de red.
+   - Los clientes envían intenciones (`PendingShot` vía RPCs) y reciben replicación mediante `SyncVar` y eventos de red buffered.
 
 3. **Ciclo de Rondas por FSM Sincronizada (`GameManager`)**:
    - El juego funciona por micro-rondas tácticas: ambos jugadores apuntan simultáneamente (`Aiming`), confirman su tiro, y al disparar ambos, las flechas vuelan en simultáneo (`Resolving`).
@@ -47,13 +48,14 @@ El proyecto está diseñado bajo principios de **Clean Architecture**, **Program
 ### A. Type Object / Flyweight (Data-Driven Design)
 * **Dónde se usa**: `ArrowDefinition.cs` y `EffectDefinition.cs`.
 * **Propósito**: Evitar la explosión de clases por herencia (`ArrowMjolnir`, `ArrowSkadi`, `ArrowApollo`). En su lugar, existe **una sola clase de datos** (`ArrowDefinition : ScriptableObject`) y **un solo proyectil físico** (`ArrowProjectile`).
-* **Ventaja**: Crear o balancear una flecha consiste únicamente en crear un asset `.asset` en el Inspector de Unity y calibrar variables numéricas (masa, daño, arrastre de viento, lifesteal, homing, efectos asociados), sin recompilar código.
+* **Ventaja**: Crear o balancear una flecha consiste únicamente en crear un asset `.asset` en el Inspector de Unity y calibrar variables numéricas (masa, daño, arrastre de viento, lifesteal, homing, efectos asociados, colores de estela), sin recompilar código.
 
 ### B. Service / Static Dispatcher Pattern
-* **Dónde se usa**: `ArrowSpawner.cs` y `CombatResolver.cs`.
+* **Dónde se usa**: `ArrowSpawner.cs`, `CombatResolver.cs` y `EventSystemCleaner.cs`.
 * **Propósito**:
   - `ArrowSpawner`: Centraliza la instanciación del prefab, configuración de colisiones (ignorar colisionadores del propio tirador), asignación de propiedad en la red (`GiveOwnership`) y llamada a `Launch()`.
   - `CombatResolver`: Centraliza la matemática del impacto: multiplicador por parte del cuerpo (`DamageHitbox`), amplificación por debufos previos, robo de vida (`lifestealRatio`), activación de ragdoll físico y aplicación de `EffectDefinition[]`.
+  - `EventSystemCleaner`: Elimina automáticamente duplicados residuales de `EventSystem` tras transiciones de red.
 * **Ventaja**: Desacopla al `GameManager` y al `PlayerShooter` de los detalles de física y combate.
 
 ### C. Observer Pattern (Event-Driven Architecture)
@@ -96,13 +98,13 @@ El proyecto está diseñado bajo principios de **Clean Architecture**, **Program
 
 | Capa | Clase | Responsabilidad Principal |
 | :--- | :--- | :--- |
-| **Core** | `ArrowDefinition` | ScriptableObject con todas las propiedades de una flecha (física, daño, homing, efectos, icono). |
+| **Core** | `ArrowDefinition` | ScriptableObject con todas las propiedades de una flecha (física, daño, homing, efectos, icono, estela). |
 | **Core** | `EffectDefinition` | ScriptableObject con propiedades de efectos de estado (sensibilidad, inversión de ejes, daño por segundo, FOV, blur). |
 | **Core** | `GameContracts` | Interfaces (`IEffectTarget`, `IWindProvider`) y structs de red (`ArrowHitInfo`, `PendingShot`). |
 | **Core** | `RoundPhase` | Enum de las fases del ciclo de micro-rondas y rondas. |
 | **Gameplay** | `ArcherPlayer` | Hub del jugador en la escena. Implementa `IEffectTarget`, gestiona el `EffectRunner` y expone el jugador local. |
-| **Gameplay** | `PlayerShooter` | Administra la mano de 3 flechas tácticas, recepción de nuevas manos, selección y envío del tiro al servidor. |
-| **Gameplay** | `ArrowProjectile` | Comportamiento del proyectil en vuelo: integración con viento, corrección homing, detección de impacto autoritativa y fijado en superficie. |
+| **Gameplay** | `PlayerShooter` | Administra la mano de 3 flechas tácticas, recepción de nuevas manos con `bufferLast: true`, selección y envío del tiro. |
+| **Gameplay** | `ArrowProjectile` | Comportamiento del proyectil en vuelo: integración con viento, corrección homing, estela `TrailRenderer` sincronizada por red y detección de impacto. |
 | **Gameplay** | `ArrowSpawner` | Servicio estático que instancia el prefab de la flecha, configura capas/colisiones y lanza el proyectil. |
 | **Gameplay** | `CombatResolver` | Servicio autoritativo que resuelve daños, lifesteal, efectos de estado e impulso al ragdoll. |
 | **Gameplay** | `HealthModule` | Gestiona la vida (`SyncVar<float> currentHealth`), regeneración, escudo y evento de muerte. |
@@ -110,8 +112,11 @@ El proyecto está diseñado bajo principios de **Clean Architecture**, **Program
 | **Gameplay** | `EffectRunner` | Administrador en memoria de los efectos temporales activos sobre un jugador. |
 | **Gameplay** | `WindManager` | Genera y sincroniza la fuerza y dirección del viento en cada ronda. |
 | **Gameplay** | `GameManager` | Orquestador de partida: sincroniza fases, contabiliza victorias por formato (Bo3 / Bo5) y gatilla disparos simultáneos. |
+| **Gameplay** | `PerformanceTelemetryMonitor` | Monitor de rendimiento en tiempo real (FPS, frame time, GC allocations, rol de red, fase y jugadores). |
+| **Gameplay** | `MatchEndPresenter` | Cinemática de victoria: podio, animación del ganador y colapso en ragdoll del rival. |
 | **UI** | `ArrowSlotMachineUI` | Presentador HUD: animación de tragamonedas (ruleta de los 3 slots) y feedback visual de flecha seleccionada/gastada. |
-| **UI** | `MatchEndUI` | Pantalla de fin de partida (animación de victoria/derrota, marcador final, rematch). |
+| **UI** | `MatchEndUI` | Pantalla de fin de partida (animación de victoria/derrota, marcador final, rematch sin condición de carrera). |
+| **UI** | `EventSystemCleaner` | Limpiador estático que garantiza exactamente un `EventSystem` activo tras cargas de escena. |
 
 ---
 
@@ -120,7 +125,7 @@ El proyecto está diseñado bajo principios de **Clean Architecture**, **Program
 Gracias a la arquitectura orientada a datos, **en el 95% de los casos NO es necesario tocar una sola línea de código C#**.
 
 ### Caso 1: Flecha Táctica Estándar o Especial (Solo Datos)
-Ejemplo: Crear una flecha llamada **"Flecha Colosal de Asedio"** (muy pesada, inmune al viento, daño masivo) o una **"Flecha Vampírica de Sangre"**.
+Ejemplo: Crear una flecha llamada **"Flecha Colosal de Asedio"** (muy pesada, inmune al viento, daño masivo y estela de fuego) o una **"Flecha Vampírica de Sangre"**.
 
 1. **Crear el Asset de Definición**:
    - En el panel de Proyecto de Unity, navegar a: `Assets/JuegoSinNombre/Data/`.
@@ -134,7 +139,7 @@ Ejemplo: Crear una flecha llamada **"Flecha Colosal de Asedio"** (muy pesada, in
      - `Description`: Breve texto descriptivo.
    - **Prefab**:
      - Asignar `ArrowDefault.prefab` (ubicado en `Assets/JuegoSinNombre/Prefabs/`).
-     - *Nota*: Si la flecha tiene una malla 3D única o partículas especiales (por ejemplo fuego), podés duplicar `ArrowDefault.prefab`, cambiarle el modelo/partículas y asignar ese nuevo prefab.
+     - *Nota*: Si la flecha tiene una malla 3D única, podés duplicar `ArrowDefault.prefab`, cambiarle el modelo y asignar ese nuevo prefab.
    - **Física**:
      - `Launch Speed Multiplier`: `0.8` (si es pesada sale más lento) o `1.2` (si es veloz).
      - `Mass`: `0.5` (más masa = mayor caída balística parabólica).
@@ -145,12 +150,18 @@ Ejemplo: Crear una flecha llamada **"Flecha Colosal de Asedio"** (muy pesada, in
      - `Homing`: `false` (o `true` con `Homing Turn Speed` si busca el torso automáticamente).
      - `Lifesteal Ratio`: `0.35` si querés que cure el 35% del daño infligido al tirador.
      - `Effects On Target`: Lista de efectos que sufrirá el rival impactado (ver siguiente sección).
+   - **Estela Visual (Trail)**:
+     - `Enable Trail`: `true`.
+     - `Trail Color`: Color de nacimiento (ej: Naranja fuego `{r: 1, g: 0.45, b: 0.1, a: 0.95}`).
+     - `Trail End Color`: Color de desvanecimiento con alfa en 0 (ej: `{r: 0.8, g: 0.1, b: 0, a: 0}`).
+     - `Trail Width`: Ancho de salida (ej: `0.13m` para flechas pesadas, `0.06m` para comunes).
+     - `Trail Time`: Duración en el aire (ej: `0.35s`).
 
 3. **Agregar la Flecha al Pool de Disparo**:
    - Abrir el prefab `Player.prefab` (`Assets/JuegoSinNombre/Prefabs/Player.prefab`).
    - Seleccionar el componente `PlayerShooter`.
    - En el array `Arsenal Pool`, incrementar el tamaño y arrastrar el nuevo asset `ArrowColosal.asset`.
-   - ¡Listo! En la siguiente ronda, el sistema de ruleta/tragamonedas podrá repartir tu nueva flecha a cualquiera de los 3 slots de los jugadores.
+   - ¡Listo! En la siguiente ronda, el sistema de ruleta/tragamonedas podrá repartir tu nueva flecha a cualquiera de los 3 slots de los jugadores y ambos verán la estela en red.
 
 ---
 
@@ -203,14 +214,13 @@ Por ejemplo, si quisiéramos una **"Flecha de Rebote (Ricochet)"** que rebotara 
 ## 5. Preguntas Clave para Estudio y Defensa de Código
 
 1. **¿Por qué `ArrowDefinition` es un ScriptableObject y no una clase MonoBehaviour con herencia?**
-   * *Respuesta*: Porque separa los datos del comportamiento. La memoria del juego no se desperdicia instanciando lógica duplicada en cada proyectil (patrón Flyweight), y los diseñadores de juego pueden balancear o crear flechas directamente desde el editor sin riesgo de introducir bugs de programación.
+   * *Respuesta*: Porque separa los datos del comportamiento (patrón Flyweight). La memoria del juego no se desperdicia instanciando lógica duplicada en cada proyectil, y los diseñadores de juego pueden balancear o crear flechas directamente desde el editor sin recompilar ni introducir bugs.
 
-2. **¿Por qué `CombatResolver` y `ArrowSpawner` son estáticos y no Monobehaviours con `FindObjectOfType`?**
-   * *Respuesta*: Son servicios sin estado intrínseco (Stateless Domain Services). Al ser estáticos, cualquier parte autoritativa del servidor puede invocarlos limpiamente sin sobrecarga de búsqueda en la jerarquía ni acoplamiento a la escena.
+2. **¿Por qué las estelas se configuran con `ConfigureTrailObserversRpc` con `bufferLast: true` en vez de sincronizar el ScriptableObject?**
+   * *Respuesta*: Porque los ScriptableObjects son referencias locales de proyecto y serializarlos por red consume ancho de banda innecesario. Enviar solo los colores y el grosor mediante un RPC con buffer asegura que cualquier cliente (incluso con retardo) configure la estela idéntica sin sobrecargar la red.
 
-3. **¿Cómo garantiza el sistema que un cliente no pueda hackear su daño o fingir que acertó un tiro en la cabeza?**
-   * *Respuesta*: El cliente únicamente envía el input/orientación de su arco. El proyectil físico viaja y detecta colisiones autoritativamente en el servidor. Es el servidor quien evalúa qué collider fue tocado (`DamageHitbox`), calcula el multiplicador y aplica la vida en `HealthModule`.
+3. **¿Cómo se resolvió la condición de carrera donde al perdedor le salía "EMPATE"?**
+   * *Respuesta*: La SyncVar de `currentPhase` llegaba al cliente milisegundos antes que el RPC `NotifyMatchOverObserversRpc`, evaluando al ganador como `null` y marcando empate prematuro. Se solucionó emitiendo el RPC antes de actualizar la SyncVar en el servidor, y haciendo que la UI espere la confirmación del ganador y admita sobrescritura si hubo un empate provisional.
 
-4. **¿Cómo interactúan `IEffectTarget` y `EffectRunner`?**
-   * *Respuesta*: `EffectRunner` gestiona la duración y acumulación de efectos en el servidor. `IEffectTarget` es la interfaz abstracta que implementa el jugador local para recibir y reflejar los modificadores (sensibilidad, blur, ejes invertidos) sin que el sistema de efectos tenga que acoplarse a la implementación concreta de cámaras o inputs.
-
+4. **¿Cómo garantiza el sistema un rendimiento de 240+ FPS en vuelo simultáneo?**
+   * *Respuesta*: Diseñando los loops de frame sin recolección de basura (*Zero-Alloc*), usando `struct` para datos efímeros (`ArrowHitInfo`), pasando las flechas a `isKinematic` en cuanto impactan para sacarlas del cálculo de PhysX, y evitando recalcular mallas de TextMeshPro si el texto no varió.
