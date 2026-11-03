@@ -28,6 +28,7 @@ namespace JuegoSinNombre
         [SerializeField] private float rotationOffset = 0f;
 
         private IWindProvider _wind;
+        private Vector3 _lastWind;
 
         private void Update()
         {
@@ -40,7 +41,14 @@ namespace JuegoSinNombre
                 _wind = WindManager.Instance;
                 _wind.OnWindChanged += HandleWindChanged;
                 HandleWindChanged(_wind.Wind);
+                return;
             }
+
+            // El jugador local puede spawnear despues del primer viento recibido, y su
+            // transform es la referencia para la rotacion. Se reaplica mientras no haya
+            // referencia todavia; una vez encontrada, el costo es un simple re-dibujo.
+            if (ArcherPlayer.LocalPlayer != null)
+                ApplyArrowRotation(_lastWind);
         }
 
         private void OnDestroy()
@@ -51,12 +59,8 @@ namespace JuegoSinNombre
 
         private void HandleWindChanged(Vector3 wind)
         {
-            if (arrowImage != null)
-            {
-                // wind.y siempre es 0 (WindManager solo trabaja en el plano XZ).
-                float angle = Mathf.Atan2(wind.x, wind.z) * Mathf.Rad2Deg;
-                arrowImage.localEulerAngles = new Vector3(0f, 0f, -angle + rotationOffset);
-            }
+            _lastWind = wind;
+            ApplyArrowRotation(wind);
 
             if (speedText != null)
             {
@@ -65,6 +69,24 @@ namespace JuegoSinNombre
                     ? $"{speed:0.0} m/s"
                     : $"{speed * 3.6f:0.0} km/h";
             }
+        }
+
+        private void ApplyArrowRotation(Vector3 wind)
+        {
+            if (arrowImage == null) return;
+
+            Transform reference = ArcherPlayer.LocalPlayer != null ? ArcherPlayer.LocalPlayer.transform : null;
+            if (reference == null) return;
+
+            // Proyecta el viento (espacio mundo, compartido) sobre los ejes locales del
+            // jugador propio: como los dos arqueros estan uno frente al otro, esto hace
+            // que cada cliente vea la flecha apuntando correctamente desde su propio punto
+            // de vista sin ningun caso especial para host/cliente.
+            float right = Vector3.Dot(wind, reference.right);
+            float forward = Vector3.Dot(wind, reference.forward);
+
+            float angle = Mathf.Atan2(right, forward) * Mathf.Rad2Deg;
+            arrowImage.localEulerAngles = new Vector3(0f, 0f, -angle + rotationOffset);
         }
     }
 }
