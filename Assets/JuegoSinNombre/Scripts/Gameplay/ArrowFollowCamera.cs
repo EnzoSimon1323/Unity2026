@@ -1,31 +1,31 @@
-using System;
 using UnityEngine;
-using JuegoSinNombre.Core;
 
 namespace JuegoSinNombre.Gameplay
 {
     /// <summary>
-    /// Cámara cinemática de seguimiento de flecha (Kill/Flight Cam).
-    /// Cuando el jugador local dispara, la cámara acompaña a su flecha en vuelo
-    /// en tercera persona, se enfoca brevemente en el punto de impacto y retorna
-    /// suavemente al arquero, dejándolo en estado Idle (requiriendo volver a apuntar).
+    /// Mini-camara (picture-in-picture) que aparece en una esquina de la pantalla al
+    /// disparar y sigue la flecha propia en vuelo. La camara principal del jugador
+    /// (AimController) nunca se toca: sigue apuntando como siempre durante el vuelo.
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(Camera))]
     public class ArrowFollowCamera : MonoBehaviour
     {
         private enum CameraState
         {
             Inactive,
             Following,
-            ImpactHold,
-            Returning
+            ImpactHold
         }
 
         [Header("Referencias (Auto-detectadas si están vacías)")]
-        [SerializeField] private Camera _playerCamera;
-        [SerializeField] private Transform _cameraPivot;
-        [SerializeField] private AimController _aimController;
         [SerializeField] private ArcherPlayer _archerPlayer;
+
+        [Header("Viewport (esquina de pantalla)")]
+        [Tooltip("Rectangulo en coordenadas de viewport (0..1, origen abajo-izquierda). Por defecto, esquina superior izquierda.")]
+        [SerializeField] private Rect _viewportRect = new Rect(0.03f, 0.60f, 0.24f, 0.25f);
+        [Tooltip("Depth de render: mas alto que la camara principal para que se dibuje encima.")]
+        [SerializeField] private float _cameraDepth = 10f;
 
         [Header("Cinemática de Vuelo")]
         [Tooltip("Distancia detrás de la flecha.")]
@@ -49,57 +49,25 @@ namespace JuegoSinNombre.Gameplay
         [Tooltip("Campo de visión (FOV) durante el vuelo.")]
         [SerializeField] private float _flightFov = 65f;
 
-        [Header("Impacto y Retorno")]
-        [Tooltip("Tiempo en segundos que la cámara observa el impacto.")]
+        [Header("Impacto")]
+        [Tooltip("Tiempo en segundos que la mini-camara observa el impacto antes de apagarse.")]
         [SerializeField] private float _impactHoldDuration = 1.0f;
 
-        [Tooltip("Duración de la transición suave de regreso al jugador.")]
-        [SerializeField] private float _returnDuration = 0.55f;
-
+        private Camera _camera;
         private CameraState _state = CameraState.Inactive;
         private ArrowProjectile _currentArrow;
         private float _impactTimer;
-        private Vector3 _returnStartPos;
-        private Quaternion _returnStartRot;
-        private float _returnStartFov;
-        private float _returnTimer;
         private Vector3 _lastKnownDirection = Vector3.forward;
-
-        private Vector3 _defaultCameraLocalPos = new Vector3(0f, 0f, -4.42f);
-        private Quaternion _defaultCameraLocalRot = Quaternion.identity;
 
         private void Awake()
         {
-            if (_aimController == null) TryGetComponent(out _aimController);
+            _camera = GetComponent<Camera>();
+            _camera.rect = _viewportRect;
+            _camera.depth = _cameraDepth;
+            _camera.enabled = false;
+
             if (_archerPlayer == null) TryGetComponent(out _archerPlayer);
-        }
-
-        private void Start()
-        {
-            ResolveReferences();
-        }
-
-        private void ResolveReferences()
-        {
-            if (_aimController != null)
-            {
-                if (_playerCamera == null)
-                    _playerCamera = _aimController.PlayerCamera != null ? _aimController.PlayerCamera : GetComponentInChildren<Camera>(true);
-
-                if (_cameraPivot == null)
-                {
-                    _cameraPivot = _aimController.CameraPivot;
-                }
-            }
-
-            if (_playerCamera == null)
-                _playerCamera = Camera.main;
-
-            if (_playerCamera != null)
-            {
-                _defaultCameraLocalPos = _playerCamera.transform.localPosition;
-                _defaultCameraLocalRot = _playerCamera.transform.localRotation;
-            }
+            if (_archerPlayer == null) _archerPlayer = GetComponentInParent<ArcherPlayer>();
         }
 
         private void OnEnable()
@@ -111,11 +79,8 @@ namespace JuegoSinNombre.Gameplay
         {
             ArrowProjectile.OnAnyArrowSpawned -= HandleAnyArrowSpawned;
             UnbindCurrentArrow();
-
-            if (_state != CameraState.Inactive)
-            {
-                FinishCameraControl();
-            }
+            _state = CameraState.Inactive;
+            if (_camera != null) _camera.enabled = false;
         }
 
         private void HandleAnyArrowSpawned(ArrowProjectile arrow)
@@ -128,9 +93,6 @@ namespace JuegoSinNombre.Gameplay
             // Solo seguir la flecha si pertenece al jugador local
             if (!arrow.isOwner) return;
 
-            ResolveReferences();
-            if (_playerCamera == null || _cameraPivot == null || _aimController == null) return;
-
             UnbindCurrentArrow();
 
             _currentArrow = arrow;
@@ -138,8 +100,8 @@ namespace JuegoSinNombre.Gameplay
             _currentArrow.OnStopped += HandleArrowStopped;
 
             _state = CameraState.Following;
-            _aimController.OverrideCameraControl = true;
-            _aimController.ForceIdle();
+            _camera.enabled = true;
+            _camera.fieldOfView = _flightFov;
 
             _lastKnownDirection = arrow.transform.forward;
         }
@@ -173,8 +135,6 @@ namespace JuegoSinNombre.Gameplay
 
         private void LateUpdate()
         {
-            if (_state == CameraState.Inactive) return;
-
             switch (_state)
             {
                 case CameraState.Following:
@@ -184,10 +144,6 @@ namespace JuegoSinNombre.Gameplay
                 case CameraState.ImpactHold:
                     UpdateImpactHold();
                     break;
-
-                case CameraState.Returning:
-                    UpdateReturning();
-                    break;
             }
         }
 
@@ -195,7 +151,7 @@ namespace JuegoSinNombre.Gameplay
         {
             if (_currentArrow == null)
             {
-                StartReturnTransition();
+                EndMiniCam();
                 return;
             }
 
@@ -208,27 +164,19 @@ namespace JuegoSinNombre.Gameplay
             }
 
             Vector3 right = Vector3.Cross(Vector3.up, _lastKnownDirection).normalized;
-            Vector3 targetPos = arrowPos - _lastKnownDirection * _distanceBehind 
-                                        + Vector3.up * _heightAbove 
+            Vector3 targetPos = arrowPos - _lastKnownDirection * _distanceBehind
+                                        + Vector3.up * _heightAbove
                                         + right * _sideOffset;
 
-            _playerCamera.transform.position = Vector3.Lerp(
-                _playerCamera.transform.position, 
-                targetPos, 
-                Time.deltaTime * _positionSmoothSpeed);
+            transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * _positionSmoothSpeed);
 
             Vector3 lookTarget = arrowPos + _lastKnownDirection * _lookAheadDistance;
-            Vector3 lookDir = (lookTarget - _playerCamera.transform.position).normalized;
+            Vector3 lookDir = (lookTarget - transform.position).normalized;
             if (lookDir.sqrMagnitude > 0.001f)
             {
                 Quaternion targetRot = Quaternion.LookRotation(lookDir);
-                _playerCamera.transform.rotation = Quaternion.Slerp(
-                    _playerCamera.transform.rotation, 
-                    targetRot, 
-                    Time.deltaTime * _rotationSpeed);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * _rotationSpeed);
             }
-
-            _playerCamera.fieldOfView = Mathf.Lerp(_playerCamera.fieldOfView, _flightFov, Time.deltaTime * 6f);
         }
 
         private void UpdateImpactHold()
@@ -238,82 +186,25 @@ namespace JuegoSinNombre.Gameplay
             if (_currentArrow != null)
             {
                 Vector3 lookTarget = _currentArrow.transform.position;
-                Vector3 lookDir = (lookTarget - _playerCamera.transform.position).normalized;
+                Vector3 lookDir = (lookTarget - transform.position).normalized;
                 if (lookDir.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(lookDir);
-                    _playerCamera.transform.rotation = Quaternion.Slerp(
-                        _playerCamera.transform.rotation, 
-                        targetRot, 
-                        Time.deltaTime * 8f);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 8f);
                 }
             }
 
             if (_impactTimer <= 0f)
             {
-                StartReturnTransition();
+                EndMiniCam();
             }
         }
 
-        private void StartReturnTransition()
-        {
-            if (_playerCamera == null)
-            {
-                FinishCameraControl();
-                return;
-            }
-
-            _state = CameraState.Returning;
-            _returnTimer = 0f;
-            _returnStartPos = _playerCamera.transform.position;
-            _returnStartRot = _playerCamera.transform.rotation;
-            _returnStartFov = _playerCamera.fieldOfView;
-        }
-
-        private void UpdateReturning()
-        {
-            if (_playerCamera == null || _cameraPivot == null)
-            {
-                FinishCameraControl();
-                return;
-            }
-
-            _returnTimer += Time.deltaTime;
-            float t = _returnDuration > 0f ? Mathf.Clamp01(_returnTimer / _returnDuration) : 1f;
-            float smoothT = Mathf.SmoothStep(0f, 1f, t);
-
-            Vector3 targetWorldPos = _cameraPivot.TransformPoint(_defaultCameraLocalPos);
-            Quaternion targetWorldRot = _cameraPivot.rotation * _defaultCameraLocalRot;
-            float targetFov = _archerPlayer != null ? _archerPlayer.Fov : 60f;
-
-            _playerCamera.transform.position = Vector3.Lerp(_returnStartPos, targetWorldPos, smoothT);
-            _playerCamera.transform.rotation = Quaternion.Slerp(_returnStartRot, targetWorldRot, smoothT);
-            _playerCamera.fieldOfView = Mathf.Lerp(_returnStartFov, targetFov, smoothT);
-
-            if (t >= 1f)
-            {
-                FinishCameraControl();
-            }
-        }
-
-        private void FinishCameraControl()
+        private void EndMiniCam()
         {
             _state = CameraState.Inactive;
             UnbindCurrentArrow();
-
-            if (_playerCamera != null && _cameraPivot != null)
-            {
-                _playerCamera.transform.localPosition = _defaultCameraLocalPos;
-                _playerCamera.transform.localRotation = _defaultCameraLocalRot;
-                float baseFov = _archerPlayer != null ? _archerPlayer.Fov : 60f;
-                _playerCamera.fieldOfView = baseFov;
-            }
-
-            if (_aimController != null)
-            {
-                _aimController.OverrideCameraControl = false;
-                _aimController.ForceIdle();
-            }
+            if (_camera != null) _camera.enabled = false;
         }
     }
 }
