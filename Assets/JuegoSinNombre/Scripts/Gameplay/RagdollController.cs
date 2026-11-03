@@ -178,19 +178,20 @@ namespace JuegoSinNombre.Gameplay
 
         public void ResetRagdoll()
         {
-            SetRagdollState(false);
-
             if (_ragdollRigidbodies != null)
             {
                 for (int i = 0; i < _ragdollRigidbodies.Length; i++)
                 {
-                    if (_ragdollRigidbodies[i] != null)
+                    var rb = _ragdollRigidbodies[i];
+                    if (rb != null && !rb.isKinematic)
                     {
-                        _ragdollRigidbodies[i].linearVelocity = Vector3.zero;
-                        _ragdollRigidbodies[i].angularVelocity = Vector3.zero;
+                        rb.linearVelocity = Vector3.zero;
+                        rb.angularVelocity = Vector3.zero;
                     }
                 }
             }
+
+            SetRagdollState(false);
 
             // Restaurar la pose original de cada hueso
             for (int i = 0; i < _initialBoneTransforms.Count; i++)
@@ -217,32 +218,34 @@ namespace JuegoSinNombre.Gameplay
         /// </summary>
         public void TeleportAndCollapse(Vector3 position, Quaternion rotation)
         {
-            SetRagdollState(false);
-
             transform.position = position;
             transform.rotation = rotation;
 
             if (TryGetComponent(out Rigidbody rootRb))
             {
-                rootRb.linearVelocity = Vector3.zero;
-                rootRb.angularVelocity = Vector3.zero;
+                if (!rootRb.isKinematic)
+                {
+                    rootRb.linearVelocity = Vector3.zero;
+                    rootRb.angularVelocity = Vector3.zero;
+                }
                 rootRb.position = position;
                 rootRb.rotation = rotation;
             }
+
+            SetRagdollState(true);
 
             if (_ragdollRigidbodies != null)
             {
                 for (int i = 0; i < _ragdollRigidbodies.Length; i++)
                 {
-                    if (_ragdollRigidbodies[i] != null)
+                    var rb = _ragdollRigidbodies[i];
+                    if (rb != null && !rb.isKinematic)
                     {
-                        _ragdollRigidbodies[i].linearVelocity = Vector3.zero;
-                        _ragdollRigidbodies[i].angularVelocity = Vector3.zero;
+                        rb.linearVelocity = Vector3.zero;
+                        rb.angularVelocity = Vector3.zero;
                     }
                 }
             }
-
-            SetRagdollState(true);
         }
 
         public void ApplyImpactForce(Vector3 force, Vector3 hitPoint, float explosionRadius = 0.5f)
