@@ -196,7 +196,7 @@ namespace JuegoSinNombre.UI
             }
 
             // Ocultar las barras flotantes de los personajes enemigos
-            var worldBars = FindObjectsByType<WorldHealthBar>(FindObjectsSortMode.None);
+            var worldBars = FindObjectsByType<WorldHealthBar>(FindObjectsInactive.Exclude);
             for (int i = 0; i < worldBars.Length; i++)
             {
                 worldBars[i].Hide();

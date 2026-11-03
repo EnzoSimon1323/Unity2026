@@ -28,3 +28,9 @@ MonoBehaviour:
   effectsOnTarget:
   - {fileID: 11400000, guid: b4e892b7f68a4fca9893660e6e986cb8, type: 2}
   effectsOnShooter: []
+  enableTrail: 1
+  trailColor: {r: 0.25, g: 0.85, b: 1, a: 0.95}
+  trailEndColor: {r: 0, g: 0.4, b: 0.9, a: 0}
+  trailWidth: 0.08
+  trailTime: 0.35
+  trailMaterial: {fileID: 0}
