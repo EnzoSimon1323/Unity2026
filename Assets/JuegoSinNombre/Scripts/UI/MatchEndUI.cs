@@ -147,18 +147,23 @@ namespace JuegoSinNombre.UI
 
         private void HandlePhaseChanged(RoundPhase phase)
         {
-            if (phase == RoundPhase.GameOver && !_isMatchOver)
+            if (phase == RoundPhase.GameOver && (!_isMatchOver || _isDraw))
             {
-                PlayerID? winner = GameManager.Instance != null ? GameManager.Instance.MatchWinner : null;
-                HandleMatchOver(winner);
+                if (GameManager.Instance != null && GameManager.Instance.MatchWinner.HasValue)
+                {
+                    HandleMatchOver(GameManager.Instance.MatchWinner);
+                }
             }
         }
 
         private void Update()
         {
-            if (!_isMatchOver && GameManager.Instance != null && GameManager.Instance.CurrentPhase == RoundPhase.GameOver)
+            if ((!_isMatchOver || _isDraw) && GameManager.Instance != null && GameManager.Instance.CurrentPhase == RoundPhase.GameOver)
             {
-                HandleMatchOver(GameManager.Instance.MatchWinner);
+                if (GameManager.Instance.MatchWinner.HasValue)
+                {
+                    HandleMatchOver(GameManager.Instance.MatchWinner);
+                }
             }
 
             if (_isMatchOver)
@@ -171,7 +176,9 @@ namespace JuegoSinNombre.UI
 
         private void HandleMatchOver(PlayerID? matchWinner)
         {
-            if (_isMatchOver) return;
+            if (_isMatchOver && !_isDraw) return;
+            if (_isMatchOver && !matchWinner.HasValue) return;
+
             _isMatchOver = true;
 
             Debug.Log($"<color=magenta><b>[MatchEndUI] Desplegando UI de fin de partida. Ganador: {matchWinner}</b></color>");

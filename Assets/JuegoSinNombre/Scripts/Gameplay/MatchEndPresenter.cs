@@ -52,6 +52,7 @@ namespace JuegoSinNombre.Gameplay
         public event Action<PlayerIdentity, PlayerIdentity> OnMatchEndPresented;
 
         private bool _isPresented;
+        private bool _isDrawPresentation;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInitialize()
@@ -133,8 +134,10 @@ namespace JuegoSinNombre.Gameplay
         {
             if (phase == RoundPhase.GameOver && !_isPresented)
             {
-                PlayerID? winner = GameManager.Instance != null ? GameManager.Instance.MatchWinner : null;
-                HandleMatchOver(winner);
+                if (GameManager.Instance != null && GameManager.Instance.MatchWinner.HasValue)
+                {
+                    HandleMatchOver(GameManager.Instance.MatchWinner);
+                }
             }
         }
 
@@ -142,14 +145,20 @@ namespace JuegoSinNombre.Gameplay
         {
             if (!_isPresented && GameManager.Instance != null && GameManager.Instance.CurrentPhase == RoundPhase.GameOver)
             {
-                HandleMatchOver(GameManager.Instance.MatchWinner);
+                if (GameManager.Instance.MatchWinner.HasValue)
+                {
+                    HandleMatchOver(GameManager.Instance.MatchWinner);
+                }
             }
         }
 
         private void HandleMatchOver(PlayerID? matchWinner)
         {
-            if (_isPresented) return;
+            if (_isPresented && !_isDrawPresentation) return;
+            if (_isPresented && !matchWinner.HasValue) return;
+
             _isPresented = true;
+            _isDrawPresentation = !matchWinner.HasValue;
 
             Debug.Log($"<color=magenta><b>[MatchEndPresenter] Ejecutando presentación de fin de partida. Ganador: {matchWinner}</b></color>");
             StartCoroutine(PresentationRoutine(matchWinner));
