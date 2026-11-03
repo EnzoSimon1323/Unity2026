@@ -23,6 +23,15 @@ namespace JuegoSinNombre.Gameplay
         [SerializeField] private string tensionParam = "Tension";
         [SerializeField] private string shootTriggerParam = "Shoot";
 
+        [Header("Visual de Flecha en Mano")]
+        [Tooltip("Objeto de la flecha en la mano (HumanArcher_ArrowInHand). Si no se asigna, se autodetecta en los hijos.")]
+        [SerializeField] private GameObject arrowInHand;
+
+        [Tooltip("Si es true, la flecha aparece al levantar el arco para apuntar (clic derecho). Si es false, recién al tensar la cuerda (clic izquierdo).")]
+        [SerializeField] private bool showOnAim = true;
+
+        private readonly SyncVar<bool> _isArrowVisible = new(false, ownerAuth: true);
+
         public float Tension { get; private set; }
         public bool IsDrawing { get; private set; }
 
@@ -39,6 +48,114 @@ namespace JuegoSinNombre.Gameplay
             if (aim == null) TryGetComponent(out aim);
             if (shooter == null) TryGetComponent(out shooter);
             if (animator == null) TryGetComponent(out animator);
+
+            FindArrowInHand();
+            SetArrowActive(false);
+        }
+
+        protected override void OnSpawned(bool asServer)
+        {
+            base.OnSpawned(asServer);
+            _isArrowVisible.onChanged += HandleArrowVisibilityChanged;
+
+            if (aim != null)
+                aim.OnAimingChanged += HandleAimingChanged;
+            if (shooter != null)
+                shooter.OnShotStatusChanged += HandleShotStatusChanged;
+
+            if (TryGetComponent<HealthModule>(out var health))
+                health.OnDeath += HandleDied;
+        }
+
+        protected override void OnDespawned(bool asServer)
+        {
+            base.OnDespawned(asServer);
+            _isArrowVisible.onChanged -= HandleArrowVisibilityChanged;
+
+            if (aim != null)
+                aim.OnAimingChanged -= HandleAimingChanged;
+            if (shooter != null)
+                shooter.OnShotStatusChanged -= HandleShotStatusChanged;
+
+            if (TryGetComponent<HealthModule>(out var health))
+                health.OnDeath -= HandleDied;
+        }
+
+        private void FindArrowInHand()
+        {
+            if (arrowInHand != null) return;
+            var allTransforms = GetComponentsInChildren<Transform>(true);
+            foreach (var t in allTransforms)
+            {
+                if (t.name == "HumanArcher_ArrowInHand" || t.name.Contains("ArrowInHand"))
+                {
+                    arrowInHand = t.gameObject;
+                    break;
+                }
+            }
+        }
+
+        private void HandleAimingChanged(bool isAiming)
+        {
+            UpdateArrowVisibility();
+        }
+
+        private void HandleShotStatusChanged(bool hasShot)
+        {
+            UpdateArrowVisibility();
+        }
+
+        private void HandleDied()
+        {
+            if (isOwner)
+            {
+                _isArrowVisible.value = false;
+            }
+            SetArrowActive(false);
+        }
+
+        private void HandleArrowVisibilityChanged(bool visible)
+        {
+            SetArrowActive(visible);
+        }
+
+        private void UpdateArrowVisibility()
+        {
+            if (!isOwner) return;
+
+            bool canShow = false;
+
+            if (player != null && player.CanShoot && (shooter == null || !shooter.HasShotThisRound))
+            {
+                if (showOnAim)
+                {
+                    canShow = aim != null && aim.IsAiming;
+                }
+                else
+                {
+                    canShow = IsDrawing;
+                }
+            }
+
+            if (_isArrowVisible.value != canShow)
+            {
+                _isArrowVisible.value = canShow;
+            }
+            SetArrowActive(canShow);
+        }
+
+        private void SetArrowActive(bool active)
+        {
+            if (arrowInHand == null)
+            {
+                FindArrowInHand();
+                if (arrowInHand == null) return;
+            }
+
+            if (arrowInHand.activeSelf != active)
+            {
+                arrowInHand.SetActive(active);
+            }
         }
 
         private void Update()
@@ -49,6 +166,8 @@ namespace JuegoSinNombre.Gameplay
             if (shooter != null && shooter.HasShotThisRound)
             {
                 if (IsDrawing) CancelDraw();
+                if (_isArrowVisible.value) _isArrowVisible.value = false;
+                SetArrowActive(false);
                 return;
             }
 
@@ -56,6 +175,11 @@ namespace JuegoSinNombre.Gameplay
             if (player == null || !player.CanShoot || aim == null || !aim.IsAiming)
             {
                 if (IsDrawing) CancelDraw();
+                if (_isArrowVisible.value && (aim == null || !aim.IsAiming || !player.CanShoot))
+                {
+                    _isArrowVisible.value = false;
+                    SetArrowActive(false);
+                }
                 return;
             }
 
@@ -77,6 +201,7 @@ namespace JuegoSinNombre.Gameplay
             _drawProgress = 0f;
             SetTension(0f);
             OnDrawStarted?.Invoke();
+            UpdateArrowVisibility();
         }
 
         private void UpdateDraw()
@@ -95,6 +220,7 @@ namespace JuegoSinNombre.Gameplay
             {
                 ResetDraw();
                 OnDrawCancelled?.Invoke();
+                UpdateArrowVisibility();
                 return;
             }
 
@@ -102,6 +228,13 @@ namespace JuegoSinNombre.Gameplay
             if (animator != null) animator.SetTrigger(shootTriggerParam);
             OnReleased?.Invoke(finalTension);
             ResetDraw();
+
+            // Ocultar inmediatamente la flecha de la mano al disparar el proyectil
+            if (_isArrowVisible.value)
+            {
+                _isArrowVisible.value = false;
+            }
+            SetArrowActive(false);
         }
 
         private void CancelDraw()
@@ -109,6 +242,7 @@ namespace JuegoSinNombre.Gameplay
             IsDrawing = false;
             ResetDraw();
             OnDrawCancelled?.Invoke();
+            UpdateArrowVisibility();
         }
 
         private void ResetDraw()

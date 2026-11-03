@@ -712,6 +712,8 @@ MonoBehaviour:
   animator: {fileID: 7598138881913556359}
   tensionParam: Tension
   shootTriggerParam: Shoot
+  arrowInHand: {fileID: 0}
+  showOnAim: 1
 --- !u!114 &6044584296957834912
 MonoBehaviour:
   m_ObjectHideFlags: 0
