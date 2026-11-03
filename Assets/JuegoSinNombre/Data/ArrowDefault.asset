@@ -18,7 +18,7 @@ MonoBehaviour:
   prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
   launchSpeedMultiplier: 1
   mass: 0.1
-  windMultiplier: 2
+  windMultiplier: 1
   alignToVelocity: 1
   baseDamage: 25
   homing: 0
