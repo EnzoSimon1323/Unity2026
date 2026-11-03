@@ -318,28 +318,30 @@ namespace JuegoSinNombre.Gameplay
             yield return new WaitForSeconds(0.5f);
 
             // Verificar si algún jugador murió (currentHealth <= 0)
-            HealthModule deadPlayer = null;
-            if (affectedPlayer != null && affectedPlayer.IsDead)
+            List<HealthModule> deadPlayers = new List<HealthModule>();
+            foreach (var kvp in PlayerIdentity.allPlayers)
             {
-                deadPlayer = affectedPlayer;
-            }
-            else
-            {
-                foreach (var kvp in PlayerIdentity.allPlayers)
+                if (kvp.Value != null && kvp.Value.HealthModule != null && kvp.Value.HealthModule.IsDead)
                 {
-                    if (kvp.Value != null && kvp.Value.HealthModule != null && kvp.Value.HealthModule.IsDead)
-                    {
-                        deadPlayer = kvp.Value.HealthModule;
-                        break;
-                    }
+                    deadPlayers.Add(kvp.Value.HealthModule);
                 }
             }
 
+            if (affectedPlayer != null && affectedPlayer.IsDead && !deadPlayers.Contains(affectedPlayer))
+            {
+                deadPlayers.Add(affectedPlayer);
+            }
+
             // 3. Resolución de la micro-ronda o fin de ronda
-            if (deadPlayer != null)
+            if (deadPlayers.Count >= 2)
+            {
+                // Ambos arqueros cayeron al mismo tiempo (Doble K.O.)
+                HandleDoubleDeathServer();
+            }
+            else if (deadPlayers.Count == 1)
             {
                 // Un jugador cayó: Sumar victoria al oponente
-                AwardRoundVictoryServer(deadPlayer);
+                AwardRoundVictoryServer(deadPlayers[0]);
             }
             else
             {
@@ -351,6 +353,43 @@ namespace JuegoSinNombre.Gameplay
                 CheckAndDealDepletedHandsServer();
 
                 _turnRoutine = StartCoroutine(ServerMicroRoundCycle());
+            }
+        }
+
+        private void HandleDoubleDeathServer()
+        {
+            if (!isServer) return;
+
+            // Ambos jugadores murieron al mismo tiempo en esta micro-ronda
+            player1Wins.value++;
+            player2Wins.value++;
+            Debug.Log($"<color=yellow>[GameManager] ¡Muerte simultánea (Doble K.O.) en la Ronda {roundNumber.value}!</color> Marcador: P1 {player1Wins.value} - P2 {player2Wins.value}");
+
+            int targetWins = WinsNeeded;
+            bool p1Reached = player1Wins.value >= targetWins;
+            bool p2Reached = player2Wins.value >= targetWins;
+
+            if (p1Reached && p2Reached)
+            {
+                // Ambos arqueros alcanzaron la meta de victorias al mismo tiempo (ej: 1 - 1 y ambos mueren -> 2 - 2) -> Empate
+                Debug.Log("<color=yellow><b>[GameManager] ¡Empate en la Partida Maestra! Ambos jugadores alcanzaron la meta simultáneamente.</b></color>");
+                TriggerMatchGameOverServer(null);
+            }
+            else if (p1Reached)
+            {
+                List<PlayerID> playerKeys = new List<PlayerID>(PlayerIdentity.allPlayers.Keys);
+                TriggerMatchGameOverServer(playerKeys.Count > 0 ? playerKeys[0] : (PlayerID?)null);
+            }
+            else if (p2Reached)
+            {
+                List<PlayerID> playerKeys = new List<PlayerID>(PlayerIdentity.allPlayers.Keys);
+                TriggerMatchGameOverServer(playerKeys.Count > 1 ? playerKeys[1] : (PlayerID?)null);
+            }
+            else
+            {
+                // Todavía nadie alcanza la meta de victorias, pasar a la siguiente ronda
+                roundNumber.value++;
+                _turnRoutine = StartCoroutine(ServerWaitAndStartNextRound());
             }
         }
 
@@ -389,7 +428,11 @@ namespace JuegoSinNombre.Gameplay
 
             // 4. Evaluar condición de victoria de la Partida Maestra
             int targetWins = WinsNeeded;
-            if (player1Wins.value >= targetWins || player2Wins.value >= targetWins)
+            if (player1Wins.value >= targetWins && player2Wins.value >= targetWins)
+            {
+                TriggerMatchGameOverServer(null);
+            }
+            else if (player1Wins.value >= targetWins || player2Wins.value >= targetWins)
             {
                 TriggerMatchGameOverServer(winnerId);
             }

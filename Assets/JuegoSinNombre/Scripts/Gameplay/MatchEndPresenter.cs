@@ -166,13 +166,13 @@ namespace JuegoSinNombre.Gameplay
             PlayerIdentity winner = null;
             PlayerIdentity loser = null;
 
-            if (PlayerIdentity.allPlayers != null)
+            if (matchWinner.HasValue && PlayerIdentity.allPlayers != null)
             {
                 foreach (var kvp in PlayerIdentity.allPlayers)
                 {
                     if (kvp.Value == null) continue;
 
-                    if (matchWinner.HasValue && kvp.Key == matchWinner.Value)
+                    if (kvp.Key == matchWinner.Value)
                     {
                         winner = kvp.Value;
                     }
@@ -181,14 +181,6 @@ namespace JuegoSinNombre.Gameplay
                         loser = kvp.Value;
                     }
                 }
-            }
-
-            // Fallback para pruebas locales
-            if (winner == null && PlayerIdentity.allPlayers != null && PlayerIdentity.allPlayers.Count > 0)
-            {
-                var enumerator = PlayerIdentity.allPlayers.Values.GetEnumerator();
-                if (enumerator.MoveNext()) winner = enumerator.Current;
-                if (enumerator.MoveNext()) loser = enumerator.Current;
             }
 
             // 2. Bloquear controles y cámaras en primera persona

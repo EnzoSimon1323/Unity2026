@@ -38,6 +38,7 @@ namespace JuegoSinNombre.UI
         [Header("Colores del Banner")]
         [SerializeField] private Color _victoryColor = new(0.18f, 0.85f, 0.35f, 1f);
         [SerializeField] private Color _defeatColor = new(0.92f, 0.22f, 0.22f, 1f);
+        [SerializeField] private Color _drawColor = new(0.95f, 0.75f, 0.2f, 1f);
 
         [Header("Navegación")]
         [SerializeField] private string _mainMenuSceneName = "MainMenu";
@@ -50,6 +51,7 @@ namespace JuegoSinNombre.UI
 
         private bool _isMatchOver;
         private bool _isLocalWinner;
+        private bool _isDraw;
         private string _scoreTextString = "";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -197,8 +199,9 @@ namespace JuegoSinNombre.UI
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            // 2. Determinar si el jugador local ganó
+            // 2. Determinar si el jugador local ganó o si fue empate
             _isLocalWinner = false;
+            _isDraw = !matchWinner.HasValue;
             PlayerID? localId = null;
 
             if (ArcherPlayer.LocalPlayer != null)
@@ -217,7 +220,7 @@ namespace JuegoSinNombre.UI
                 }
             }
 
-            if (localId.HasValue && matchWinner.HasValue)
+            if (!_isDraw && localId.HasValue && matchWinner.HasValue)
             {
                 _isLocalWinner = (localId.Value == matchWinner.Value);
             }
@@ -238,20 +241,23 @@ namespace JuegoSinNombre.UI
                 }
             }
 
-            // Fallback: asegurarse de que el ganador siempre vea su puntuación primero
-            if (_isLocalWinner)
+            if (!_isDraw)
             {
-                int max = Mathf.Max(localWins, rivalWins);
-                int min = Mathf.Min(localWins, rivalWins);
-                localWins = max;
-                rivalWins = min;
-            }
-            else
-            {
-                int max = Mathf.Max(localWins, rivalWins);
-                int min = Mathf.Min(localWins, rivalWins);
-                localWins = min;
-                rivalWins = max;
+                // Fallback: asegurarse de que el ganador siempre vea su puntuación primero
+                if (_isLocalWinner)
+                {
+                    int max = Mathf.Max(localWins, rivalWins);
+                    int min = Mathf.Min(localWins, rivalWins);
+                    localWins = max;
+                    rivalWins = min;
+                }
+                else
+                {
+                    int max = Mathf.Max(localWins, rivalWins);
+                    int min = Mathf.Min(localWins, rivalWins);
+                    localWins = min;
+                    rivalWins = max;
+                }
             }
 
             _scoreTextString = $"{localWins} - {rivalWins}";
@@ -263,8 +269,11 @@ namespace JuegoSinNombre.UI
 
                 if (_resultTitleText != null)
                 {
-                    _resultTitleText.text = _isLocalWinner ? "¡VICTORIA!" : "DERROTA";
-                    _resultTitleText.color = _isLocalWinner ? _victoryColor : _defeatColor;
+                    string titleText = _isDraw ? "¡EMPATE!" : (_isLocalWinner ? "¡VICTORIA!" : "DERROTA");
+                    Color titleColor = _isDraw ? _drawColor : (_isLocalWinner ? _victoryColor : _defeatColor);
+
+                    _resultTitleText.text = titleText;
+                    _resultTitleText.color = titleColor;
                 }
 
                 if (_scoreText != null)
@@ -311,9 +320,10 @@ namespace JuegoSinNombre.UI
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
-            titleStyle.normal.textColor = _isLocalWinner ? _victoryColor : _defeatColor;
+            string title = _isDraw ? "¡EMPATE!" : (_isLocalWinner ? "¡VICTORIA!" : "DERROTA");
+            Color titleColor = _isDraw ? _drawColor : (_isLocalWinner ? _victoryColor : _defeatColor);
+            titleStyle.normal.textColor = titleColor;
 
-            string title = _isLocalWinner ? "¡VICTORIA!" : "DERROTA";
             GUI.Label(new Rect(posX, posY + 20f, boxWidth, 65f), title, titleStyle);
 
             var bodyStyle = new GUIStyle(GUI.skin.label)
