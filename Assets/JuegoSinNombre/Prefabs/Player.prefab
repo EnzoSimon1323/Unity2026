@@ -593,10 +593,39 @@ MonoBehaviour:
   _directChildren: []
   player: {fileID: 5332230635311595454}
   shooter: {fileID: 6044584296957834912}
+  bow: {fileID: 0}
   cameraPivot: {fileID: 5097325959320179880}
   bodyPivot: {fileID: 3024399195877579062}
   playerCamera: {fileID: 1130339829164792812}
   animator: {fileID: 7598138881913556359}
+  swayFrequency: 0.6
+  swayAmplitude: 1.5
+  swayByTension:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  fatigueRampTime: 2.5
+  fatigueMultiplier: 1
   minPitch: -40
   maxPitch: 176.7
   maxYawOffset: 60
@@ -605,7 +634,7 @@ MonoBehaviour:
   isAimingParam: IsAiming
   normalCameraOffset: {x: 0, y: 0, z: -4.41}
   aimCameraOffset: {x: -0.025, y: 0.05, z: 0}
-  cameraMoveSpeed: 8
+  cameraMoveSpeed: 5
 --- !u!114 &5332230635311595454
 MonoBehaviour:
   m_ObjectHideFlags: 0

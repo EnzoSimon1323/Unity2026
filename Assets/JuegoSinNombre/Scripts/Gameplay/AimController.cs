@@ -9,10 +9,27 @@ namespace JuegoSinNombre.Gameplay
         [Header("Referencias")]
         [SerializeField] private ArcherPlayer player;
         [SerializeField] private PlayerShooter shooter;
+        [SerializeField] private BowController bow;
         [SerializeField] private Transform cameraPivot;
         [SerializeField] private Transform bodyPivot;
         [SerializeField] private Camera playerCamera;
         [SerializeField] private Animator animator;
+
+        [Header("Pulso humano (sway al tensar, estilo Wii Sports Resort)")]
+        [Tooltip("Que tan rapido oscila el pulso. Bajo = temblor lento y humano, alto = vibracion nerviosa.")]
+        [SerializeField] private float swayFrequency = 1.1f;
+        [Tooltip("Amplitud maxima del temblor en grados, a tension 1 y sin fatiga.")]
+        [SerializeField] private float swayAmplitude = 1.5f;
+        [Tooltip("Como crece el temblor segun la tension del arco (0 = relajado, 1 = tension maxima).")]
+        [SerializeField] private AnimationCurve swayByTension = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [Tooltip("Segundos sosteniendo el tiro a full tension hasta llegar a la fatiga maxima.")]
+        [SerializeField] private float fatigueRampTime = 2.5f;
+        [Tooltip("Multiplicador extra de amplitud cuando la fatiga esta al maximo.")]
+        [SerializeField] private float fatigueMultiplier = 1f;
+
+        private float _swaySeedYaw;
+        private float _swaySeedPitch;
+        private float _drawHoldTime;
 
         [Header("Limites")]
         [SerializeField] private float minPitch = -40f;
@@ -55,6 +72,7 @@ namespace JuegoSinNombre.Gameplay
         {
             if (player == null) TryGetComponent(out player);
             if (shooter == null) TryGetComponent(out shooter);
+            if (bow == null) TryGetComponent(out bow);
             if (animator == null) TryGetComponent(out animator);
         }
 
@@ -67,6 +85,10 @@ namespace JuegoSinNombre.Gameplay
             _initialYaw = cameraPivot != null ? cameraPivot.eulerAngles.y : transform.eulerAngles.y;
             _yaw = _initialYaw;
             _pitch = cameraPivot != null ? cameraPivot.eulerAngles.x : 0f;
+
+            // Semillas aleatorias para que el Perlin noise de cada jugador no oscile identico.
+            _swaySeedYaw = UnityEngine.Random.Range(0f, 1000f);
+            _swaySeedPitch = UnityEngine.Random.Range(0f, 1000f);
 
             if (playerCamera != null)
                 _defaultCameraLocalRot = playerCamera.transform.localRotation;
@@ -146,11 +168,30 @@ namespace JuegoSinNombre.Gameplay
                 _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
             }
 
+            // Pulso humano: tiembla mas cuanto mas tenso esta el arco, y crece con el tiempo
+            // sostenido (fatiga), como en el arco de Wii Sports Resort. Es un offset aparte
+            // de _yaw/_pitch para no desviar permanentemente la mira que el jugador controla.
+            bool isDrawing = bow != null && bow.IsDrawing;
+            _drawHoldTime = isDrawing ? _drawHoldTime + Time.deltaTime : 0f;
+
+            float tension = bow != null ? bow.Tension : 0f;
+            float fatigue = fatigueRampTime > 0f ? Mathf.Clamp01(_drawHoldTime / fatigueRampTime) : 0f;
+            float swayIntensity = swayByTension.Evaluate(tension) * (1f + fatigue * fatigueMultiplier);
+
+            float noiseYaw = (Mathf.PerlinNoise(Time.time * swayFrequency + _swaySeedYaw, 0f) - 0.5f) * 2f;
+            float noisePitch = (Mathf.PerlinNoise(0f, Time.time * swayFrequency + _swaySeedPitch) - 0.5f) * 2f;
+
+            float swayYaw = IsAiming ? noiseYaw * swayAmplitude * swayIntensity : 0f;
+            float swayPitch = IsAiming ? noisePitch * swayAmplitude * swayIntensity : 0f;
+
+            float appliedYaw = _yaw + swayYaw;
+            float appliedPitch = _pitch + swayPitch;
+
             if (cameraPivot != null && !OverrideCameraControl)
-                cameraPivot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+                cameraPivot.rotation = Quaternion.Euler(appliedPitch, appliedYaw, 0f);
 
             if (bodyPivot != null)
-                bodyPivot.rotation = Quaternion.Euler(0f, _yaw, 0f);
+                bodyPivot.rotation = Quaternion.Euler(0f, appliedYaw, 0f);
 
             // Solo actualizar posición, rotación y FOV si la cámara no está en modo seguimiento cinemático
             if (playerCamera != null && !OverrideCameraControl)
