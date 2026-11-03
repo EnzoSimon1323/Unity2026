@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Serialization;
 using TMPro;
 using JuegoSinNombre.Core;
 using JuegoSinNombre.Gameplay;
@@ -10,13 +10,13 @@ using JuegoSinNombre.Gameplay;
 namespace JuegoSinNombre.UI
 {
     /// <summary>
-    /// Elementos visuales de cada uno de los 3 cuadrados de la mano táctica.
-    /// Se pueden asignar directamente arrastrando los objetos desde la jerarquía en el Inspector.
+    /// Elementos visuales de cada una de las 3 ranuras de flecha.
+    /// Si asignás solo el slotRect, el script autocompleta el resto buscando en los hijos.
     /// </summary>
     [System.Serializable]
     public class SlotUIElements
     {
-        [Tooltip("RectTransform del cuadrado contenedor de este slot.")]
+        [Tooltip("RectTransform del cuadrado de este slot.")]
         public RectTransform slotRect;
 
         [Tooltip("Imagen de fondo del cuadro.")]
@@ -25,7 +25,7 @@ namespace JuegoSinNombre.UI
         [Tooltip("Borde o halo que se ilumina cuando esta ranura está seleccionada.")]
         public Image outlineBorder;
 
-        [Tooltip("Contenedor interno del contenido que tiembla/vibra durante la ruleta.")]
+        [Tooltip("Contenedor interno del contenido que vibra durante la ruleta.")]
         public RectTransform reelContent;
 
         [Tooltip("Imagen del icono de la flecha.")]
@@ -42,65 +42,57 @@ namespace JuegoSinNombre.UI
 
         [Tooltip("Overlay que se enciende cuando la flecha ya fue disparada.")]
         public GameObject spentOverlay;
+
+        [Tooltip("Botón opcional para seleccionar el slot con click del mouse.")]
+        public Button button;
     }
 
     /// <summary>
     /// Widget HUD de Mano Táctica estilo Tragamoneda (Slot Machine):
-    /// - Soporta asignación manual directa desde el Inspector de Unity (para mover, diseñar y escalar a gusto).
-    /// - Si no se asignan referencias, genera un fallback procedural automáticamente.
+    /// 1. Los 3 slots giran en el centro de la pantalla como una ruleta y se detienen de 1 en 1.
+    /// 2. Al terminar de repartir, se desplaza suavemente hacia la esquina inferior derecha.
+    /// 3. Resalta la flecha seleccionada y marca las gastadas.
     /// </summary>
     public class ArrowSlotMachineUI : MonoBehaviour
     {
-        [Header("Referencias de UI (Asigná tus objetos acá)")]
-        [Tooltip("El contenedor padre de los 3 slots (el que se mueve del centro a la esquina).")]
-        [SerializeField] private RectTransform _manualRootContainer;
+        [Header("Contenedor a Desplazar")]
+        [Tooltip("El RectTransform del objeto con el Horizontal Layout Group (SlotContainer). Si se deja vacío, busca automáticamente el hijo con HorizontalLayoutGroup.")]
+        [FormerlySerializedAs("_rootContainer")]
+        [FormerlySerializedAs("_manualRootContainer")]
+        [SerializeField] private RectTransform _containerToMove;
 
-        [Tooltip("Opcional: Cartel 'ARSENAL TÁCTICO' que se muestra en el centro.")]
-        [SerializeField] private CanvasGroup _manualBannerGroup;
+        [Header("Las 3 Ranuras")]
+        [Tooltip("Los 3 slots (Slot 0 = Tecla 1, Slot 1 = Tecla 2, Slot 2 = Tecla 3).")]
+        [FormerlySerializedAs("_slots")]
+        [FormerlySerializedAs("_manualSlots")]
+        [SerializeField] private SlotUIElements[] _slots = new SlotUIElements[3];
 
-        [Tooltip("Las 3 ranuras de la fila (Slot 0 = Tecla 1, Slot 1 = Tecla 2, Slot 2 = Tecla 3).")]
-        [SerializeField] private SlotUIElements[] _manualSlots = new SlotUIElements[3];
+        [Header("Posición y Escala")]
+        [Tooltip("Offset adicional para el centro de la pantalla.")]
+        [SerializeField] private Vector2 _centerOffset = Vector2.zero;
 
-        [Header("Posiciones y Anchors")]
-        [Tooltip("Posición del contenedor en el centro de la pantalla.")]
-        [SerializeField] private Vector2 _centerAnchoredPosition = Vector2.zero;
+        [Tooltip("Escala mientras está en el centro de la pantalla.")]
+        [SerializeField] private float _centerScale = 1.2f;
 
-        [Tooltip("Escala del contenedor mientras está en el centro de la pantalla.")]
-        [SerializeField] private float _centerScale = 1.25f;
-
-        [Tooltip("Posición final del contenedor en la esquina inferior derecha.")]
+        [Tooltip("Posición final en la esquina inferior derecha (distancia desde el borde derecho e inferior).")]
         [SerializeField] private Vector2 _bottomRightOffset = new Vector2(-25f, 25f);
 
-        [Tooltip("Escala final del contenedor en la esquina inferior derecha.")]
+        [Tooltip("Escala final en la esquina inferior derecha.")]
         [SerializeField] private float _hudScale = 0.95f;
 
-        [Header("Tiempos de Animación (segundos)")]
+        [Header("Tiempos de Ruleta (segundos)")]
         [SerializeField] private float _spinDurationSlot0 = 1.0f;
         [SerializeField] private float _spinDurationSlot1 = 1.65f;
         [SerializeField] private float _spinDurationSlot2 = 2.3f;
+
+        [Tooltip("Tiempo que se queda en el centro después de frenar el 3er slot antes de viajar.")]
         [SerializeField] private float _centerHoldDuration = 0.5f;
+
+        [Tooltip("Duración del viaje desde el centro hasta la esquina inferior derecha.")]
         [SerializeField] private float _transitionDuration = 0.75f;
 
-        [Header("Fallback Procedural (solo si no asignás referencias manuales)")]
-        [SerializeField] private Vector2 _fallbackSlotSize = new Vector2(105f, 115f);
-        [SerializeField] private float _fallbackSlotSpacing = 16f;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoInitialize()
-        {
-            if (FindAnyObjectByType<ArrowSlotMachineUI>() == null)
-            {
-                var go = new GameObject("[ArrowSlotMachineUI]");
-                go.AddComponent<ArrowSlotMachineUI>();
-                DontDestroyOnLoad(go);
-            }
-        }
-
         private Canvas _targetCanvas;
-        private RectTransform _rootContainer;
-        private CanvasGroup _bannerGroup;
-        private readonly SlotUIElements[] _slots = new SlotUIElements[3];
-
+        private CanvasGroup _canvasGroup;
         private PlayerShooter _shooter;
         private Coroutine _slotMachineRoutine;
         private bool _isSpinning = false;
@@ -108,19 +100,46 @@ namespace JuegoSinNombre.UI
         private ArrowDefinition[] _currentHand;
         private int _selectedSlot = 0;
 
-        private static Sprite _whiteSprite;
-        private static Sprite WhiteSprite
+        private void Awake()
         {
-            get
+            FindContainerToMove();
+
+            _targetCanvas = GetComponentInParent<Canvas>();
+            if (_targetCanvas == null)
             {
-                if (_whiteSprite == null)
+                _targetCanvas = FindAnyObjectByType<Canvas>();
+            }
+
+            // Usar CanvasGroup para ocultar visualmente sin desactivar el GameObject
+            _canvasGroup = GetComponent<CanvasGroup>();
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+            _canvasGroup.alpha = 0f;
+            _canvasGroup.blocksRaycasts = false;
+
+            AutoWireMissingSlotReferences();
+            LoadPossibleArrows();
+        }
+
+        private void FindContainerToMove()
+        {
+            if (_containerToMove == null || _containerToMove == (RectTransform)transform || _containerToMove.GetComponent<Canvas>() != null)
+            {
+                var layout = GetComponentInChildren<HorizontalLayoutGroup>(true);
+                if (layout != null)
                 {
-                    Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                    tex.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
-                    tex.Apply();
-                    _whiteSprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+                    _containerToMove = layout.GetComponent<RectTransform>();
                 }
-                return _whiteSprite;
+                else if (transform.childCount > 0 && transform.GetChild(0) is RectTransform childRect)
+                {
+                    _containerToMove = childRect;
+                }
+                else
+                {
+                    _containerToMove = GetComponent<RectTransform>();
+                }
             }
         }
 
@@ -129,17 +148,7 @@ namespace JuegoSinNombre.UI
             PlayerIdentity.OnLocalPlayerSpawned += HandleLocalPlayerSpawned;
             PlayerIdentity.OnLocalPlayerDespawned += HandleLocalPlayerDespawned;
 
-            if (PlayerIdentity.allPlayers != null)
-            {
-                foreach (var kvp in PlayerIdentity.allPlayers)
-                {
-                    if (kvp.Value != null && kvp.Value.isOwner)
-                    {
-                        HandleLocalPlayerSpawned(kvp.Value);
-                        break;
-                    }
-                }
-            }
+            TryBindLocalPlayer();
         }
 
         private void OnDisable()
@@ -149,33 +158,73 @@ namespace JuegoSinNombre.UI
             UnbindShooter();
         }
 
-        private void Start()
+        private void Update()
         {
-            EnsureUIHierarchy();
+            if (_shooter == null)
+            {
+                TryBindLocalPlayer();
+            }
+        }
+
+        private void TryBindLocalPlayer()
+        {
+            if (PlayerIdentity.allPlayers != null)
+            {
+                foreach (var kvp in PlayerIdentity.allPlayers)
+                {
+                    if (kvp.Value != null && kvp.Value.isOwner)
+                    {
+                        HandleLocalPlayerSpawned(kvp.Value);
+                        return;
+                    }
+                }
+            }
+
+            if (ArcherPlayer.LocalPlayer != null)
+            {
+                var shooter = ArcherPlayer.LocalPlayer.GetComponent<PlayerShooter>();
+                if (shooter != null)
+                {
+                    BindShooter(shooter);
+                }
+            }
         }
 
         private void HandleLocalPlayerSpawned(PlayerIdentity player)
         {
             if (player == null || !player.isOwner) return;
 
+            var shooter = player.GetComponent<PlayerShooter>();
+            if (shooter != null)
+            {
+                BindShooter(shooter);
+            }
+        }
+
+        private void BindShooter(PlayerShooter shooter)
+        {
+            if (_shooter == shooter) return;
+
             UnbindShooter();
 
-            _shooter = player.GetComponent<PlayerShooter>();
-            if (_shooter != null)
-            {
-                _shooter.OnHandDealt += HandleHandDealt;
-                _shooter.OnHandChanged += HandleHandChanged;
+            _shooter = shooter;
+            _shooter.OnHandDealt += HandleHandDealt;
+            _shooter.OnHandChanged += HandleHandChanged;
 
-                if (_shooter.CurrentHand != null && (_shooter.CurrentHand[0] != null || _shooter.CurrentHand[1] != null || _shooter.CurrentHand[2] != null))
-                {
-                    HandleHandDealt(_shooter.CurrentHand);
-                }
+            if (_shooter.CurrentHand != null && (_shooter.CurrentHand[0] != null || _shooter.CurrentHand[1] != null || _shooter.CurrentHand[2] != null))
+            {
+                HandleHandDealt(_shooter.CurrentHand);
             }
         }
 
         private void HandleLocalPlayerDespawned(PlayerIdentity player = null)
         {
             UnbindShooter();
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha = 0f;
+                _canvasGroup.blocksRaycasts = false;
+            }
         }
 
         private void UnbindShooter()
@@ -191,7 +240,15 @@ namespace JuegoSinNombre.UI
         private void HandleHandDealt(ArrowDefinition[] hand)
         {
             if (hand == null) return;
-            EnsureUIHierarchy();
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu") return;
+
+            FindContainerToMove();
+
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha = 1f;
+                _canvasGroup.blocksRaycasts = true;
+            }
 
             _currentHand = (ArrowDefinition[])hand.Clone();
 
@@ -212,177 +269,91 @@ namespace JuegoSinNombre.UI
             }
         }
 
-        // ================= VINCULACIÓN MANUAL O GENERACIÓN PROCEDURAL =================
-
-        private void EnsureUIHierarchy()
+        private void AutoWireMissingSlotReferences()
         {
-            if (_rootContainer != null) return;
+            FindContainerToMove();
+            if (_containerToMove == null) return;
 
-            // Verificar si el usuario ya asignó las referencias manualmente en el Inspector
-            if (_manualRootContainer != null && _manualSlots != null && _manualSlots.Length == 3 && _manualSlots[0] != null && _manualSlots[0].slotRect != null)
+            if (_slots == null || _slots.Length < 3)
             {
-                _rootContainer = _manualRootContainer;
-                _bannerGroup = _manualBannerGroup;
-                for (int i = 0; i < 3; i++)
-                {
-                    _slots[i] = _manualSlots[i];
-                }
-                _targetCanvas = _rootContainer.GetComponentInParent<Canvas>();
-                LoadPossibleArrows();
-                SetContainerToCenter();
-                return;
+                _slots = new SlotUIElements[3];
             }
-
-            // Fallback: Generación procedural
-            _targetCanvas = FindAnyObjectByType<Canvas>();
-            if (_targetCanvas == null)
-            {
-                var canvasGo = new GameObject("TacticalQuiverCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-                _targetCanvas = canvasGo.GetComponent<Canvas>();
-                _targetCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                _targetCanvas.sortingOrder = 50;
-
-                var scaler = canvasGo.GetComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = new Vector2(1920, 1080);
-                scaler.matchWidthOrHeight = 0.5f;
-            }
-
-            var rootGo = new GameObject("TacticalQuiverRoot", typeof(RectTransform));
-            rootGo.transform.SetParent(_targetCanvas.transform, false);
-            _rootContainer = rootGo.GetComponent<RectTransform>();
-
-            float totalWidth = (_fallbackSlotSize.x * 3f) + (_fallbackSlotSpacing * 2f);
-            _rootContainer.sizeDelta = new Vector2(totalWidth, _fallbackSlotSize.y + 40f);
-            SetContainerToCenter();
-
-            var bannerGo = new GameObject("Banner", typeof(RectTransform), typeof(CanvasGroup));
-            bannerGo.transform.SetParent(_rootContainer, false);
-            _bannerGroup = bannerGo.GetComponent<CanvasGroup>();
-            var bannerRect = bannerGo.GetComponent<RectTransform>();
-            bannerRect.anchorMin = new Vector2(0.5f, 1f);
-            bannerRect.anchorMax = new Vector2(0.5f, 1f);
-            bannerRect.pivot = new Vector2(0.5f, 0f);
-            bannerRect.anchoredPosition = new Vector2(0f, 6f);
-            bannerRect.sizeDelta = new Vector2(totalWidth, 32f);
-
-            var bannerText = CreateTextMesh(bannerGo.transform, "ARSENAL TÁCTICO", 18, Color.yellow, FontStyles.Bold);
-            bannerText.alignment = TextAlignmentOptions.Center;
-            bannerText.rectTransform.anchorMin = Vector2.zero;
-            bannerText.rectTransform.anchorMax = Vector2.one;
-            bannerText.rectTransform.sizeDelta = Vector2.zero;
 
             for (int i = 0; i < 3; i++)
             {
-                _slots[i] = CreateProceduralSlotView(i, totalWidth);
+                if (_slots[i] == null) _slots[i] = new SlotUIElements();
+
+                if (_slots[i].slotRect == null && i < _containerToMove.childCount)
+                {
+                    _slots[i].slotRect = _containerToMove.GetChild(i) as RectTransform;
+                }
+
+                var sRect = _slots[i].slotRect;
+                if (sRect == null) continue;
+
+                if (_slots[i].background == null)
+                    _slots[i].background = sRect.GetComponent<Image>();
+
+                if (_slots[i].outlineBorder == null)
+                {
+                    var b = sRect.Find("OutlineBorder") ?? sRect.Find("Border");
+                    if (b != null) _slots[i].outlineBorder = b.GetComponent<Image>();
+                }
+
+                if (_slots[i].reelContent == null)
+                {
+                    var r = sRect.Find("ReelContent") ?? sRect.Find("Content");
+                    _slots[i].reelContent = r != null ? r as RectTransform : sRect;
+                }
+
+                if (_slots[i].arrowIcon == null)
+                {
+                    var ic = sRect.Find("ReelContent/ArrowIcon") ?? sRect.Find("ArrowIcon") ?? sRect.Find("Icon");
+                    if (ic != null) _slots[i].arrowIcon = ic.GetComponent<Image>();
+                }
+
+                if (_slots[i].nameText == null)
+                {
+                    var n = sRect.Find("ReelContent/NameText") ?? sRect.Find("NameText") ?? sRect.Find("Name");
+                    if (n != null) _slots[i].nameText = n.GetComponent<TextMeshProUGUI>();
+                }
+
+                if (_slots[i].traitText == null)
+                {
+                    var t = sRect.Find("ReelContent/TraitText") ?? sRect.Find("TraitText") ?? sRect.Find("Trait");
+                    if (t != null) _slots[i].traitText = t.GetComponent<TextMeshProUGUI>();
+                }
+
+                if (_slots[i].keyBadge == null)
+                {
+                    var k = sRect.Find("KeyBadge") ?? sRect.Find("Badge");
+                    if (k != null) _slots[i].keyBadge = k.GetComponent<TextMeshProUGUI>();
+                }
+
+                if (_slots[i].spentOverlay == null)
+                {
+                    var sp = sRect.Find("SpentOverlay") ?? sRect.Find("Spent") ?? sRect.Find("ReelContent/SpentOverlay");
+                    if (sp != null) _slots[i].spentOverlay = sp.gameObject;
+                }
+
+                if (_slots[i].button == null)
+                {
+                    _slots[i].button = sRect.GetComponent<Button>();
+                }
+
+                if (_slots[i].button != null)
+                {
+                    int slotIndex = i;
+                    _slots[i].button.onClick.RemoveAllListeners();
+                    _slots[i].button.onClick.AddListener(() =>
+                    {
+                        if (_shooter != null)
+                        {
+                            _shooter.TrySelectSlot(slotIndex);
+                        }
+                    });
+                }
             }
-
-            LoadPossibleArrows();
-        }
-
-        private SlotUIElements CreateProceduralSlotView(int index, float totalWidth)
-        {
-            var view = new SlotUIElements();
-
-            var slotGo = new GameObject($"Slot_{index}", typeof(RectTransform));
-            slotGo.transform.SetParent(_rootContainer, false);
-            view.slotRect = slotGo.GetComponent<RectTransform>();
-            view.slotRect.sizeDelta = _fallbackSlotSize;
-
-            float startX = -totalWidth * 0.5f + (_fallbackSlotSize.x * 0.5f);
-            float posX = startX + index * (_fallbackSlotSize.x + _fallbackSlotSpacing);
-            view.slotRect.anchoredPosition = new Vector2(posX, 0f);
-
-            var bgGo = new GameObject("Background", typeof(RectTransform), typeof(Image));
-            bgGo.transform.SetParent(slotGo.transform, false);
-            var bgRect = bgGo.GetComponent<RectTransform>();
-            bgRect.anchorMin = Vector2.zero;
-            bgRect.anchorMax = Vector2.one;
-            bgRect.sizeDelta = Vector2.zero;
-            view.background = bgGo.GetComponent<Image>();
-            view.background.sprite = WhiteSprite;
-            view.background.color = new Color(0.08f, 0.09f, 0.13f, 0.92f);
-
-            var borderGo = new GameObject("OutlineBorder", typeof(RectTransform), typeof(Image));
-            borderGo.transform.SetParent(slotGo.transform, false);
-            var borderRect = borderGo.GetComponent<RectTransform>();
-            borderRect.anchorMin = Vector2.zero;
-            borderRect.anchorMax = Vector2.one;
-            borderRect.sizeDelta = new Vector2(6f, 6f);
-            view.outlineBorder = borderGo.GetComponent<Image>();
-            view.outlineBorder.sprite = WhiteSprite;
-            view.outlineBorder.color = new Color(1f, 0.85f, 0.2f, 0f);
-
-            var reelGo = new GameObject("ReelContent", typeof(RectTransform));
-            reelGo.transform.SetParent(slotGo.transform, false);
-            view.reelContent = reelGo.GetComponent<RectTransform>();
-            view.reelContent.anchorMin = Vector2.zero;
-            view.reelContent.anchorMax = Vector2.one;
-            view.reelContent.sizeDelta = Vector2.zero;
-
-            var iconGo = new GameObject("ArrowIcon", typeof(RectTransform), typeof(Image));
-            iconGo.transform.SetParent(reelGo.transform, false);
-            var iconRect = iconGo.GetComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.5f, 0.62f);
-            iconRect.anchorMax = new Vector2(0.5f, 0.62f);
-            iconRect.sizeDelta = new Vector2(50f, 50f);
-            view.arrowIcon = iconGo.GetComponent<Image>();
-            view.arrowIcon.sprite = WhiteSprite;
-            view.arrowIcon.color = Color.white;
-
-            view.nameText = CreateTextMesh(reelGo.transform, "FLECHA", 14, Color.white, FontStyles.Bold);
-            view.nameText.alignment = TextAlignmentOptions.Center;
-            view.nameText.rectTransform.anchorMin = new Vector2(0.05f, 0.22f);
-            view.nameText.rectTransform.anchorMax = new Vector2(0.95f, 0.38f);
-            view.nameText.rectTransform.sizeDelta = Vector2.zero;
-
-            view.traitText = CreateTextMesh(reelGo.transform, "Especial", 11, new Color(0.75f, 0.85f, 1f, 0.9f), FontStyles.Normal);
-            view.traitText.alignment = TextAlignmentOptions.Center;
-            view.traitText.rectTransform.anchorMin = new Vector2(0.05f, 0.05f);
-            view.traitText.rectTransform.anchorMax = new Vector2(0.95f, 0.20f);
-            view.traitText.rectTransform.sizeDelta = Vector2.zero;
-
-            view.keyBadge = CreateTextMesh(slotGo.transform, $"[{index + 1}]", 13, new Color(1f, 0.95f, 0.4f), FontStyles.Bold);
-            view.keyBadge.alignment = TextAlignmentOptions.TopLeft;
-            view.keyBadge.rectTransform.anchorMin = new Vector2(0f, 1f);
-            view.keyBadge.rectTransform.anchorMax = new Vector2(0f, 1f);
-            view.keyBadge.rectTransform.pivot = new Vector2(0f, 1f);
-            view.keyBadge.rectTransform.anchoredPosition = new Vector2(6f, -4f);
-            view.keyBadge.rectTransform.sizeDelta = new Vector2(30f, 20f);
-
-            var spentGo = new GameObject("SpentOverlay", typeof(RectTransform), typeof(Image));
-            spentGo.transform.SetParent(slotGo.transform, false);
-            var spentRect = spentGo.GetComponent<RectTransform>();
-            spentRect.anchorMin = Vector2.zero;
-            spentRect.anchorMax = Vector2.one;
-            spentRect.sizeDelta = Vector2.zero;
-            var spentImg = spentGo.GetComponent<Image>();
-            spentImg.sprite = WhiteSprite;
-            spentImg.color = new Color(0.05f, 0.05f, 0.05f, 0.78f);
-
-            var spentTxt = CreateTextMesh(spentGo.transform, "DISPARADA", 13, new Color(1f, 0.35f, 0.35f), FontStyles.Bold);
-            spentTxt.alignment = TextAlignmentOptions.Center;
-            spentTxt.rectTransform.anchorMin = Vector2.zero;
-            spentTxt.rectTransform.anchorMax = Vector2.one;
-            spentTxt.rectTransform.sizeDelta = Vector2.zero;
-
-            view.spentOverlay = spentGo;
-            view.spentOverlay.SetActive(false);
-
-            return view;
-        }
-
-        private TextMeshProUGUI CreateTextMesh(Transform parent, string text, float size, Color color, FontStyles style)
-        {
-            var go = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
-            go.transform.SetParent(parent, false);
-            var tmp = go.GetComponent<TextMeshProUGUI>();
-            tmp.text = text;
-            tmp.fontSize = size;
-            tmp.color = color;
-            tmp.fontStyle = style;
-            tmp.raycastTarget = false;
-            return tmp;
         }
 
         private void LoadPossibleArrows()
@@ -398,15 +369,57 @@ namespace JuegoSinNombre.UI
 
         // ================= ANIMACIÓN DE TRAGAMONEDA & TRASLADO =================
 
+        private Vector2 CalculateBottomRightPosition()
+        {
+            float canvasWidth = 1920f;
+            float canvasHeight = 1080f;
+
+            if (_targetCanvas != null)
+            {
+                var cr = _targetCanvas.GetComponent<RectTransform>();
+                if (cr != null && cr.rect.width > 50f && cr.rect.height > 50f)
+                {
+                    canvasWidth = cr.rect.width;
+                    canvasHeight = cr.rect.height;
+                }
+            }
+
+            float w = 345f;
+            float h = 115f;
+            if (_containerToMove != null)
+            {
+                if (_containerToMove.rect.width > 10f) w = _containerToMove.rect.width;
+                if (_containerToMove.rect.height > 10f) h = _containerToMove.rect.height;
+            }
+
+            float halfCanvasW = canvasWidth * 0.5f;
+            float halfCanvasH = canvasHeight * 0.5f;
+
+            float scaledHalfW = (w * 0.5f) * _hudScale;
+            float scaledHalfH = (h * 0.5f) * _hudScale;
+
+            float marginX = Mathf.Abs(_bottomRightOffset.x);
+            float marginY = Mathf.Abs(_bottomRightOffset.y);
+            if (marginX < 1f) marginX = 25f;
+            if (marginY < 1f) marginY = 25f;
+
+            float targetX = halfCanvasW - scaledHalfW - marginX;
+            float targetY = -halfCanvasH + scaledHalfH + marginY;
+
+            return new Vector2(targetX, targetY);
+        }
+
         private void SetContainerToCenter()
         {
-            if (_rootContainer == null) return;
-            _rootContainer.anchorMin = new Vector2(0.5f, 0.5f);
-            _rootContainer.anchorMax = new Vector2(0.5f, 0.5f);
-            _rootContainer.pivot = new Vector2(0.5f, 0.5f);
-            _rootContainer.anchoredPosition = _centerAnchoredPosition;
-            _rootContainer.localScale = Vector3.one * _centerScale;
-            if (_bannerGroup != null) _bannerGroup.alpha = 1f;
+            FindContainerToMove();
+            if (_containerToMove == null) return;
+
+            _containerToMove.anchorMin = new Vector2(0.5f, 0.5f);
+            _containerToMove.anchorMax = new Vector2(0.5f, 0.5f);
+            _containerToMove.pivot = new Vector2(0.5f, 0.5f);
+
+            _containerToMove.anchoredPosition = _centerOffset;
+            _containerToMove.localScale = Vector3.one * _centerScale;
         }
 
         private IEnumerator AnimateSlotMachineRoutine(ArrowDefinition[] targets)
@@ -439,17 +452,12 @@ namespace JuegoSinNombre.UI
                 {
                     nextCycleTime = timer + cycleInterval;
 
-                    if (!slot0Stopped)
-                        ApplyRandomArrowToSlot(_slots[0]);
-
-                    if (!slot1Stopped)
-                        ApplyRandomArrowToSlot(_slots[1]);
-
-                    if (!slot2Stopped)
-                        ApplyRandomArrowToSlot(_slots[2]);
+                    if (!slot0Stopped) ApplyRandomArrowToSlot(_slots[0]);
+                    if (!slot1Stopped) ApplyRandomArrowToSlot(_slots[1]);
+                    if (!slot2Stopped) ApplyRandomArrowToSlot(_slots[2]);
                 }
 
-                // Jitter vertical estilo ruleta mecánica
+                // Jitter vertical estilo ruleta
                 float jitter = Mathf.Sin(timer * 45f) * 4f;
                 if (!slot0Stopped && _slots[0]?.reelContent != null) _slots[0].reelContent.anchoredPosition = new Vector2(0f, jitter);
                 if (!slot1Stopped && _slots[1]?.reelContent != null) _slots[1].reelContent.anchoredPosition = new Vector2(0f, -jitter);
@@ -485,21 +493,8 @@ namespace JuegoSinNombre.UI
                 yield return null;
             }
 
-            // Pausa dramática en el centro
+            // Pausa en el centro para contemplar la mano
             yield return new WaitForSeconds(_centerHoldDuration);
-
-            // Desvanecer banner si existe
-            if (_bannerGroup != null)
-            {
-                float fadeTime = 0.25f;
-                float fadeElapsed = 0f;
-                while (fadeElapsed < fadeTime)
-                {
-                    fadeElapsed += Time.deltaTime;
-                    _bannerGroup.alpha = Mathf.Lerp(1f, 0f, fadeElapsed / fadeTime);
-                    yield return null;
-                }
-            }
 
             // Transición suave: Centro -> Esquina Inferior Derecha
             yield return StartCoroutine(TransitionToBottomRightRoutine());
@@ -528,21 +523,13 @@ namespace JuegoSinNombre.UI
 
         private IEnumerator TransitionToBottomRightRoutine()
         {
-            if (_rootContainer == null) yield break;
+            FindContainerToMove();
+            if (_containerToMove == null) yield break;
 
-            Vector3 startScale = _rootContainer.localScale;
+            Vector2 startPos = _containerToMove.anchoredPosition;
+            Vector3 startScale = _containerToMove.localScale;
 
-            _rootContainer.anchorMin = new Vector2(1f, 0f);
-            _rootContainer.anchorMax = new Vector2(1f, 0f);
-            _rootContainer.pivot = new Vector2(1f, 0f);
-
-            float canvasWidth = _targetCanvas != null ? _targetCanvas.GetComponent<RectTransform>().rect.width : 1920f;
-            float canvasHeight = _targetCanvas != null ? _targetCanvas.GetComponent<RectTransform>().rect.height : 1080f;
-            Vector2 centerPosInBrAnchors = new Vector2(-canvasWidth * 0.5f + (_rootContainer.sizeDelta.x * 0.5f), canvasHeight * 0.5f - (_rootContainer.sizeDelta.y * 0.5f));
-
-            _rootContainer.anchoredPosition = centerPosInBrAnchors;
-
-            Vector2 targetPos = _bottomRightOffset;
+            Vector2 targetPos = CalculateBottomRightPosition();
             Vector3 targetScale = Vector3.one * _hudScale;
 
             float elapsed = 0f;
@@ -550,15 +537,25 @@ namespace JuegoSinNombre.UI
             {
                 elapsed += Time.deltaTime;
                 float p = Mathf.Clamp01(elapsed / _transitionDuration);
-                float ease = p < 0.5f ? 4f * p * p * p : 1f - Mathf.Pow(-2f * p + 2f, 3f) / 2f;
+                // Smoothstep (aceleración y desaceleración suave)
+                float ease = p * p * (3f - 2f * p);
 
-                _rootContainer.anchoredPosition = Vector2.Lerp(centerPosInBrAnchors, targetPos, ease);
-                _rootContainer.localScale = Vector3.Lerp(startScale, targetScale, ease);
+                _containerToMove.anchoredPosition = Vector2.Lerp(startPos, targetPos, ease);
+                _containerToMove.localScale = Vector3.Lerp(startScale, targetScale, ease);
                 yield return null;
             }
 
-            _rootContainer.anchoredPosition = targetPos;
-            _rootContainer.localScale = targetScale;
+            _containerToMove.anchoredPosition = targetPos;
+            _containerToMove.localScale = targetScale;
+        }
+
+        [ContextMenu("Probar Traslado a Abajo Derecha")]
+        public void TestTransitionInPlayMode()
+        {
+            if (Application.isPlaying)
+            {
+                StartCoroutine(TransitionToBottomRightRoutine());
+            }
         }
 
         // ================= ACTUALIZACIÓN VISUAL DE SLOTS =================

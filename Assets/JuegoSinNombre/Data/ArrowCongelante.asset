@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArrowDefinition
   displayName: Flecha Congelante
   icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  description: 'Imbuida en hielo ártico. Reduce la sensibilidad de la mira y duplica el tiempo de tensado.'
+  description: "Imbuida en hielo \xE1rtico. Reduce la sensibilidad de la mira y duplica el tiempo de tensado."
   prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
-  launchSpeedMultiplier: 1.0
+  launchSpeedMultiplier: 1
   mass: 0.1
-  windMultiplier: 1.0
+  windMultiplier: 1
   alignToVelocity: 1
   baseDamage: 20
   homing: 0
@@ -26,5 +26,5 @@ MonoBehaviour:
   lifestealRatio: 0
   splashRadius: 0
   effectsOnTarget:
-  - {fileID: 11400000, guid: b4e892b7f68a4fca9893660e6e986cb8, type: 3}
+  - {fileID: 11400000, guid: b4e892b7f68a4fca9893660e6e986cb8, type: 2}
   effectsOnShooter: []

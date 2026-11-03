@@ -184,7 +184,7 @@ namespace JuegoSinNombre.Gameplay
             }
         }
 
-        private void TrySelectSlot(int slot)
+        public void TrySelectSlot(int slot)
         {
             if (slot >= 0 && slot < 3 && _currentHand[slot] != null && _selectedSlot != slot)
             {
@@ -242,10 +242,6 @@ namespace JuegoSinNombre.Gameplay
             ArrowDefinition def = ResolveArrowDef(poolIndex);
             if (def == null || def.prefab == null) return;
 
-            // Consumir ranura
-            _handIndices[slotIndex] = -1;
-            ConsumeSlotObserversRpc(slotIndex);
-
             tension = Mathf.Clamp01(tension);
             if (direction.sqrMagnitude < 0.0001f) return;
             direction.Normalize();
@@ -262,15 +258,38 @@ namespace JuegoSinNombre.Gameplay
                     direction = direction,
                     speed = speed,
                     arrowDef = def,
-                    shooterIdentity = this
+                    shooterIdentity = this,
+                    slotIndex = slotIndex
                 });
             }
             else
             {
+                // Modo solitario o fallback offline sin GameManager
+                ConsumeSlotServer(slotIndex);
                 ArrowSpawner.SpawnAndLaunch(def, spawnPosition, direction, speed, owner, this);
+                CheckAndDealNewHandOnServer();
             }
+        }
 
-            // Si se consumieron las 3 flechas, repartir una mano nueva
+        /// <summary>
+        /// Consume la ranura autoritativamente en el servidor cuando la flecha efectivamente se lanza en Resolving.
+        /// </summary>
+        public void ConsumeSlotServer(int slotIndex)
+        {
+            if (!isServer) return;
+            if (slotIndex < 0 || slotIndex >= 3) return;
+
+            _handIndices[slotIndex] = -1;
+            ConsumeSlotObserversRpc(slotIndex);
+        }
+
+        /// <summary>
+        /// Reparte 3 nuevas flechas en el servidor ÚNICAMENTE si todas las ranuras están gastadas (-1).
+        /// Se invoca tras la resolución del combate en Outcome.
+        /// </summary>
+        public void CheckAndDealNewHandOnServer()
+        {
+            if (!isServer) return;
             if (_handIndices[0] == -1 && _handIndices[1] == -1 && _handIndices[2] == -1)
             {
                 Debug.Log($"<color=yellow>[PlayerShooter] Todas las flechas gastadas. Repartiendo nueva mano para {owner}.</color>");

@@ -83,5 +83,6 @@ namespace JuegoSinNombre.Core
         public float speed;
         public ArrowDefinition arrowDef;
         public NetworkIdentity shooterIdentity;
+        public int slotIndex;
     }
 }

@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArrowDefinition
   displayName: Flecha Venenosa
   icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  description: 'Emponzoñada con veneno de serpiente. Causa daño en el tiempo al rival mientras apunta.'
+  description: "Emponzo\xF1ada con veneno de serpiente. Causa da\xF1o en el tiempo al rival mientras apunta."
   prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
-  launchSpeedMultiplier: 1.0
+  launchSpeedMultiplier: 1
   mass: 0.1
-  windMultiplier: 1.0
+  windMultiplier: 1
   alignToVelocity: 1
   baseDamage: 20
   homing: 0
@@ -26,5 +26,5 @@ MonoBehaviour:
   lifestealRatio: 0
   splashRadius: 0
   effectsOnTarget:
-  - {fileID: 11400000, guid: 2cf20b791a694d878c3b4497b5500091, type: 3}
+  - {fileID: 11400000, guid: 2cf20b791a694d878c3b4497b5500091, type: 2}
   effectsOnShooter: []

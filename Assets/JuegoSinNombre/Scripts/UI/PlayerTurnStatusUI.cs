@@ -24,6 +24,20 @@ namespace JuegoSinNombre.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInitialize()
         {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += HandleSceneLoaded;
+            CheckAndCreateInstance();
+        }
+
+        private static void HandleSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+        {
+            CheckAndCreateInstance();
+        }
+
+        private static void CheckAndCreateInstance()
+        {
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu")
+                return;
+
             if (FindAnyObjectByType<PlayerTurnStatusUI>() == null)
             {
                 var go = new GameObject("[PlayerTurnStatusUI]");
@@ -102,6 +116,28 @@ namespace JuegoSinNombre.UI
             {
                 var player = ArcherPlayer.LocalPlayer.GetComponent<PlayerIdentity>();
                 if (player != null) HandleLocalPlayerSpawned(player);
+            }
+
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu")
+            {
+                _rawMessage = "";
+                _lastFormattedMessage = "";
+                if (_statusText != null) _statusText.text = "";
+                return;
+            }
+
+            if (_localPlayer == null && ArcherPlayer.LocalPlayer != null)
+            {
+                var player = ArcherPlayer.LocalPlayer.GetComponent<PlayerIdentity>();
+                if (player != null) HandleLocalPlayerSpawned(player);
+            }
+
+            if (_localPlayer == null || GameManager.Instance == null)
+            {
+                _rawMessage = "";
+                _lastFormattedMessage = "";
+                if (_statusText != null) _statusText.text = "";
+                return;
             }
 
             ComputeCurrentStatus(out _rawMessage, out _lastFormattedMessage, out _currentColor);
@@ -196,6 +232,9 @@ namespace JuegoSinNombre.UI
 
         private void OnGUI()
         {
+            if (_localPlayer == null || GameManager.Instance == null || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu")
+                return;
+
             // Solo dibujar fallback por OnGUI si no hay un TextMeshProUGUI asignado y está habilitado
             if (_statusText != null || !_enableOnGuiFallback) return;
             if (string.IsNullOrEmpty(_rawMessage)) return;

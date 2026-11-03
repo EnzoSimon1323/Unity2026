@@ -153,6 +153,9 @@ namespace JuegoSinNombre.Gameplay
 
             // 1. Restaurar vida y estado de todos los jugadores
             ResetAllPlayersHealthAndState();
+
+            // Repartir mano si las 3 flechas fueron gastadas
+            CheckAndDealDepletedHandsServer();
             
             // 3. Comenzar ciclo de micro-ronda de disparo
             _turnRoutine = StartCoroutine(ServerMicroRoundCycle());
@@ -218,6 +221,12 @@ namespace JuegoSinNombre.Gameplay
 
             foreach (var kvp in _pendingShots)
             {
+                // Consumir el slot de la flecha autoritativamente AHORA que se dispara en Resolving
+                if (kvp.Value.shooterIdentity != null && kvp.Value.shooterIdentity.TryGetComponent(out PlayerShooter shooter))
+                {
+                    shooter.ConsumeSlotServer(kvp.Value.slotIndex);
+                }
+
                 ArrowSpawner.SpawnAndLaunch(kvp.Value);
             }
 
@@ -337,6 +346,9 @@ namespace JuegoSinNombre.Gameplay
                 // Ambos siguen en pie: Pausa breve y preparar la siguiente flecha (micro-ronda)
                 Debug.Log($"[GameManager] Ambos arqueros siguen con vida. Preparando siguiente micro-ronda en {_nextMicroRoundDelay}s...");
                 yield return new WaitForSeconds(_nextMicroRoundDelay);
+
+                // Reasignar mano de flechas en el servidor ÚNICAMENTE tras la resolución del combate si las 3 fueron gastadas
+                CheckAndDealDepletedHandsServer();
 
                 _turnRoutine = StartCoroutine(ServerMicroRoundCycle());
             }
@@ -472,6 +484,19 @@ namespace JuegoSinNombre.Gameplay
                 if (kvp.Value.TryGetComponent(out PlayerShooter shooter))
                 {
                     shooter.ResetRoundShotRpc();
+                }
+            }
+        }
+
+        private void CheckAndDealDepletedHandsServer()
+        {
+            if (!isServer) return;
+
+            foreach (var kvp in PlayerIdentity.allPlayers)
+            {
+                if (kvp.Value != null && kvp.Value.TryGetComponent(out PlayerShooter shooter))
+                {
+                    shooter.CheckAndDealNewHandOnServer();
                 }
             }
         }
