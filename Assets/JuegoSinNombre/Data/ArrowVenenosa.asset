@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2c2eb383457c854bb5d2d20e211467b, type: 3}
+  m_Name: ArrowVenenosa
+  m_EditorClassIdentifier: Assembly-CSharp::ArrowDefinition
+  displayName: Flecha Venenosa
+  icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  description: 'Emponzoñada con veneno de serpiente. Causa daño en el tiempo al rival mientras apunta.'
+  prefab: {fileID: 203325101387372584, guid: ccf9016e5c9df9043b5dc1fb48cb4b34, type: 3}
+  launchSpeedMultiplier: 1.0
+  mass: 0.1
+  windMultiplier: 1.0
+  alignToVelocity: 1
+  baseDamage: 20
+  homing: 0
+  homingTurnSpeed: 0
+  lifestealRatio: 0
+  splashRadius: 0
+  effectsOnTarget:
+  - {fileID: 11400000, guid: 2cf20b791a694d878c3b4497b5500091, type: 3}
+  effectsOnShooter: []

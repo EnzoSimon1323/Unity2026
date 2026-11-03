@@ -733,6 +733,13 @@ MonoBehaviour:
   _parent: {fileID: 0}
   _invertedPathToNearestParent: 
   _directChildren: []
+  arsenalPool:
+  - {fileID: 11400000, guid: fd0091e4e047427d9190eefb7f5f2049, type: 2}
+  - {fileID: 11400000, guid: 7dbb208ad86c499db5add38fccf14719, type: 2}
+  - {fileID: 11400000, guid: ea151e30d2e74556ab4f98695b2163cc, type: 2}
+  - {fileID: 11400000, guid: 0d70f75fb2664c53b5015498229518b2, type: 2}
+  - {fileID: 11400000, guid: c385fade20a346f28815dfbc35c77a72, type: 2}
+  - {fileID: 11400000, guid: 7791a11a231e4c31bab21382c7f89efa, type: 2}
   loadout:
   - {fileID: 11400000, guid: 60a45beb0d262b54d81f9a32dc88750e, type: 2}
   baseLaunchSpeed: 40

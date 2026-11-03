@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a420e3ab8bcb394a815b7686f8b0394, type: 3}
+  m_Name: EffectCongelacion
+  m_EditorClassIdentifier: Assembly-CSharp::EffectDefinition
+  displayName: Escarcha de Skadi
+  hudDescription: 'Congelado: Mira ralentizada y tiempo de tensado duplicado.'
+  expiresOnPhase: 5
+  phaseCount: 1
+  invertAxes: 0
+  sensitivityMultiplier: 0.4
+  drawTimeMultiplier: 2
+  blurAmount: 0
+  fovMultiplier: 1
+  hideCrosshair: 0
+  damagePerSecond: 0

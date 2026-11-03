@@ -17,6 +17,7 @@ namespace JuegoSinNombre.Gameplay
         private ArrowDefinition _definition;
         private PlayerID? _shooter;
         private bool _flying;
+        private Transform _homingTargetTorso;
 
         private readonly SyncVar<Vector3> _velocity = new(Vector3.zero);
         private readonly SyncVar<float> _mass = new(0.1f);
@@ -132,9 +133,42 @@ namespace JuegoSinNombre.Gameplay
             Destroy(gameObject, lifeTime);
         }
 
+        private void FindHomingTarget()
+        {
+            foreach (var p in ArcherPlayer.AllPlayers)
+            {
+                if (p != null && (!p.owner.HasValue || !_shooter.HasValue || p.owner.Value != _shooter.Value))
+                {
+                    _homingTargetTorso = p.TorsoTransform;
+                    break;
+                }
+            }
+        }
+
         private void FixedUpdate()
         {
             if (!_flying) return;
+
+            // Buscadora de Apolo: guiado autoritativo hacia el torso del oponente
+            if (isServer && _definition != null && _definition.homing)
+            {
+                if (_homingTargetTorso == null)
+                    FindHomingTarget();
+
+                if (_homingTargetTorso != null && _rb != null)
+                {
+                    Vector3 toTarget = (_homingTargetTorso.position - transform.position).normalized;
+                    float turnSpeed = _definition.homingTurnSpeed > 0f ? _definition.homingTurnSpeed : 3.5f;
+                    Vector3 currentVel = _rb.linearVelocity;
+                    float speed = currentVel.magnitude;
+                    if (speed > 0.1f)
+                    {
+                        Vector3 newVel = Vector3.RotateTowards(currentVel, toTarget * speed, turnSpeed * Time.fixedDeltaTime, 0f);
+                        _rb.linearVelocity = newVel;
+                        _velocity.value = newVel;
+                    }
+                }
+            }
 
             float windMult = _definition != null ? _definition.windMultiplier : _windMultiplier.value;
             if (windMult != 0f && WindManager.Instance != null)
@@ -192,6 +226,14 @@ namespace JuegoSinNombre.Gameplay
 
                     BodyPartType bodyPart = hitbox != null ? hitbox.BodyPart : BodyPartType.Torso;
                     float multiplier = hitbox != null ? hitbox.DamageMultiplier : 1.0f;
+
+                    // Regla GDD: La flecha buscadora de Apolo NUNCA puede impactar en la cabeza, solo en el cuerpo/torso
+                    if (_definition != null && _definition.homing && bodyPart == BodyPartType.Head)
+                    {
+                        bodyPart = BodyPartType.Torso;
+                        multiplier = 1.0f;
+                    }
+
                     float baseDamage = _definition != null ? _definition.baseDamage : 0f;
                     float finalDamage = baseDamage * multiplier;
 
@@ -207,6 +249,7 @@ namespace JuegoSinNombre.Gameplay
                         hitPoint = contactPoint,
                         bodyPart = bodyPart,
                         damageMultiplier = multiplier,
+                        definition = _definition,
                         effects = _definition != null ? _definition.effectsOnTarget : null
                     };
 
