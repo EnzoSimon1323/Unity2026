@@ -432,9 +432,15 @@ namespace JuegoSinNombre.Gameplay
             {
                 TriggerMatchGameOverServer(null);
             }
-            else if (player1Wins.value >= targetWins || player2Wins.value >= targetWins)
+            else if (player1Wins.value >= targetWins)
             {
-                TriggerMatchGameOverServer(winnerId);
+                PlayerID? p1Winner = playerKeys.Count > 0 ? playerKeys[0] : winnerId;
+                TriggerMatchGameOverServer(p1Winner);
+            }
+            else if (player2Wins.value >= targetWins)
+            {
+                PlayerID? p2Winner = playerKeys.Count > 1 ? playerKeys[1] : winnerId;
+                TriggerMatchGameOverServer(p2Winner);
             }
             else
             {
@@ -455,11 +461,12 @@ namespace JuegoSinNombre.Gameplay
         {
             if (!isServer) return;
 
-            currentPhase.value = (int)RoundPhase.GameOver;
+            MatchWinner = matchWinner;
             SetAllPlayersCanShoot(false);
             Debug.Log($"<color=yellow><b>[GameManager] ¡FIN DE LA PARTIDA MAESTRA! Ganador: {matchWinner}</b></color>");
 
             NotifyMatchOverObserversRpc(matchWinner);
+            currentPhase.value = (int)RoundPhase.GameOver;
         }
 
         [ObserversRpc(runLocally: true)]
